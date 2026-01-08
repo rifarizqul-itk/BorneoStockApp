@@ -24,8 +24,19 @@ export default function AddItemScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
+    // Validasi Dasar
     if (!form.name || !form.stock) {
-      Alert.alert("Error", "Nama barang dan Stok minimal harus diisi!");
+      Alert.alert("Error", "Nama barang dan Stok wajib diisi!");
+      return;
+    }
+
+    // Validasi Angka
+    const stockVal = Number(form.stock);
+    const buyVal = Number(form.price_buy);
+    const sellVal = Number(form.price_sell);
+
+    if (isNaN(stockVal) || isNaN(buyVal) || isNaN(sellVal)) {
+      Alert.alert("Error", "Stok dan Harga harus berupa angka!");
       return;
     }
 
@@ -34,16 +45,15 @@ export default function AddItemScreen() {
       await addDoc(collection(db, "inventory"), {
         ...form,
         barcode: barcode || 'Manual Input',
-        stock: Number(form.stock),
-        price_buy: Number(form.price_buy),
-        price_sell: Number(form.price_sell),
+        stock: stockVal,
+        price_buy: buyVal,
+        price_sell: sellVal,
         created_at: serverTimestamp(),
       });
       
       Alert.alert("Sukses", "Barang berhasil disimpan!");
-      router.replace('/(tabs)'); // Kembali ke Dashboard
-    } catch (error) {
-      console.error("Error adding document: ", error);
+      router.replace('/(tabs)');
+    } catch {
       Alert.alert("Error", "Gagal menyimpan data.");
     } finally {
       setLoading(false);

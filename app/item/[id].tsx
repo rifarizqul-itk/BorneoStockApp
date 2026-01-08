@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback} from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -12,11 +12,7 @@ export default function ItemDetail() {
   const [newStock, setNewStock] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchItem();
-  }, [id]);
-
-  const fetchItem = async () => {
+  const fetchItem = useCallback(async () => {
     try {
       const docRef = doc(db, "inventory", id as string);
       const docSnap = await getDoc(docRef);
@@ -25,12 +21,16 @@ export default function ItemDetail() {
         setItem(data);
         setNewStock(data.stock.toString());
       }
-    } catch (e) {
+    } catch {
       Alert.alert("Error", "Gagal mengambil detail barang.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+    useEffect(() => {
+    fetchItem();
+  }, [fetchItem]);
 
   const handleUpdateStock = async () => {
     try {
@@ -38,7 +38,7 @@ export default function ItemDetail() {
       await updateDoc(docRef, { stock: Number(newStock) });
       Alert.alert("Sukses", "Stok berhasil diperbarui!");
       fetchItem();
-    } catch (e) {
+    } catch {
       Alert.alert("Error", "Gagal update stok.");
     }
   };
@@ -59,11 +59,15 @@ export default function ItemDetail() {
         <View style={styles.priceRow}>
           <View style={styles.priceBox}>
             <Text style={styles.priceLabel}>Harga Modal</Text>
-            <Text style={styles.priceValue}>Rp {Number(item.price_buy).toLocaleString()}</Text>
+            <Text style={styles.priceValue}>
+                Rp {(Number(item.price_buy) || 0).toLocaleString('id-ID')}
+            </Text>
           </View>
           <View style={styles.priceBox}>
             <Text style={styles.priceLabel}>Harga Jual</Text>
-            <Text style={[styles.priceValue, {color: '#2e7d32'}]}>Rp {Number(item.price_sell).toLocaleString()}</Text>
+            <Text style={[styles.priceValue, {color: '#2e7d32'}]}>
+                Rp {(Number(item.price_sell) || 0).toLocaleString('id-ID')}
+            </Text>
           </View>
         </View>
       </View>

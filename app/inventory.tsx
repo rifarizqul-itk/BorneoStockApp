@@ -43,11 +43,18 @@ export default function InventoryScreen() {
         onPress={() => router.push(`/item/${item.id}` as any)} // Navigasi ke detail
     >
         <View style={styles.itemInfo}>
-        <Text style={styles.itemName}>{item.name}</Text>
-        <Text style={styles.itemSub}>{item.brand} - {item.model}</Text>
-        <View style={styles.badge}>
-            <Text style={styles.badgeText}>{item.category || 'Sparepart'}</Text>
-        </View>
+            <Text style={styles.itemName}>{item.name}</Text>
+            <Text style={styles.itemSub}>{item.brand} - {item.model}</Text>
+            <View style={{flexDirection: 'row', gap: 5, marginTop: 5}}>
+                <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{item.category || 'Sparepart'}</Text>
+                </View>
+                {item.location && (
+                    <View style={[styles.badge, {backgroundColor: '#eee'}]}>
+                        <Text style={[styles.badgeText, {color: '#666'}]}>{item.location}</Text>
+                    </View>
+                )}
+            </View>
         </View>
         <View style={styles.stockContainer}>
         <Text style={styles.stockLabel}>STOK</Text>

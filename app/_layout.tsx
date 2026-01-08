@@ -9,12 +9,13 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        {/* Halaman utama (Tabs) */}
+      <Stack screenOptions={{
+        headerStyle: { backgroundColor: '#000' },
+        headerTintColor: '#f7bd1a',
+        headerTitleStyle: { fontWeight: 'bold' },
+      }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        
-        {/* Halaman Scan & Tambah Barang */}
-        <Stack.Screen name="scan" options={{ title: 'Scan Barcode', headerTitleAlign: 'center' }} />
+        <Stack.Screen name="scan" options={{ title: 'Scan Barcode' }} />
         <Stack.Screen name="inventory" options={{ title: 'Daftar Stok' }} />
         <Stack.Screen name="add-item" options={{ title: 'Tambah Barang Baru' }} />
       </Stack>
