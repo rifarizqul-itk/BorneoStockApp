@@ -1,98 +1,105 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient'; // Perlu: npx expo install expo-linear-gradient
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  return (
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Header dengan Gradient agar Terasa Premium */}
+      <View style={styles.headerContainer}>
+        <Text style={styles.brandTitle}>BORNEO</Text>
+        <Text style={styles.brandSubtitle}>Specialis Ponsel</Text>
+      </View>
+
+      <View style={styles.content}>
+        {/* Ringkasan Stok dalam Bentuk Card */}
+        <View style={styles.summaryRow}>
+          <View style={[styles.card, styles.shadow]}>
+            <Text style={styles.cardLabel}>Total Stok</Text>
+            <Text style={styles.cardValue}>1,240</Text>
+          </View>
+          <View style={[styles.card, styles.shadow, { borderLeftColor: '#FF3B30', borderLeftWidth: 5 }]}>
+            <Text style={styles.cardLabel}>Stok Habis</Text>
+            <Text style={[styles.cardValue, { color: '#FF3B30' }]}>12</Text>
+          </View>
+        </View>
+
+        {/* Menu Utama dengan Icon Besar */}
+        <Text style={styles.sectionTitle}>Menu Utama</Text>
+        
+        <TouchableOpacity 
+          style={[styles.menuItem, styles.shadow]} 
+          onPress={() => router.push('/scan' as any)}
+        >
+          <View style={[styles.iconCircle, { backgroundColor: '#1A73E8' }]}>
+            <Ionicons name="barcode-outline" size={28} color="#fff" />
+          </View>
+          <View>
+            <Text style={styles.menuTitle}>Scan Barcode</Text>
+            <Text style={styles.menuDesc}>Input atau cari barang via kamera</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.menuItem, styles.shadow]} 
+          onPress={() => router.push('/inventory' as any)}
+        >
+          <View style={[styles.iconCircle, { backgroundColor: '#34A853' }]}>
+            <Ionicons name="cube-outline" size={28} color="#fff" />
+          </View>
+          <View>
+            <Text style={styles.menuTitle}>Manajemen Stok</Text>
+            <Text style={styles.menuDesc}>Lihat dan edit semua data barang</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  headerContainer: { 
+    backgroundColor: '#1A73E8', 
+    paddingTop: 60, 
+    paddingBottom: 40, 
+    paddingHorizontal: 25,
+    borderBottomRightRadius: 50 
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  brandTitle: { fontSize: 32, fontWeight: '900', color: '#fff', letterSpacing: 2 },
+  brandSubtitle: { fontSize: 16, color: '#E0E0E0', fontWeight: '500' },
+  content: { paddingHorizontal: 20, marginTop: -30 },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 },
+  card: { 
+    backgroundColor: '#fff', 
+    width: '47%', 
+    padding: 15, 
+    borderRadius: 15, 
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  shadow: {
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
   },
+  cardLabel: { fontSize: 12, color: '#666', marginBottom: 5 },
+  cardValue: { fontSize: 22, fontWeight: 'bold', color: '#333' },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 15 },
+  menuItem: { 
+    backgroundColor: '#fff', 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 18, 
+    borderRadius: 20, 
+    marginBottom: 15 
+  },
+  iconCircle: { width: 55, height: 55, borderRadius: 27.5, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  menuTitle: { fontSize: 16, fontWeight: '700', color: '#333' },
+  menuDesc: { fontSize: 12, color: '#888' }
 });
