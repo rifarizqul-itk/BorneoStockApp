@@ -48,3 +48,4 @@ yarn-error.log*
 .expo-shared/
 
 .vscode/
+firebaseConfig.js
