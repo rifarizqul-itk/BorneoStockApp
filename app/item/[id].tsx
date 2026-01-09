@@ -55,7 +55,7 @@ export default function ItemDetail() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>💰 Informasi Harga</Text>
+        <Text style={styles.sectionTitle}>Informasi Harga</Text>
         <View style={styles.priceRow}>
           <View style={styles.priceBox}>
             <Text style={styles.priceLabel}>Harga Modal</Text>
@@ -73,7 +73,7 @@ export default function ItemDetail() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📦 Manajemen Stok</Text>
+        <Text style={styles.sectionTitle}>Manajemen Stok</Text>
         <View style={styles.stockEditContainer}>
           <TextInput 
             style={styles.stockInput}
@@ -85,8 +85,8 @@ export default function ItemDetail() {
             <Text style={styles.updateButtonText}>UPDATE STOK</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.infoText}>📍 Lokasi Rak: {item.location || '-'}</Text>
-        <Text style={styles.infoText}>🆔 Barcode: {item.barcode}</Text>
+        <Text style={styles.infoText}>Lokasi Rak: {item.location || '-'}</Text>
+        <Text style={styles.infoText}>Barcode: {item.barcode}</Text>
       </View>
 
       <TouchableOpacity 

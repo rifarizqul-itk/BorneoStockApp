@@ -64,6 +64,16 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
 
+        <TouchableOpacity style={[styles.menuItem, styles.shadow]} onPress={() => router.push('/add-item' as any)}>
+          <View style={[styles.iconCircle, { backgroundColor: '#333' }]}>
+            <Ionicons name="create-outline" size={28} color="#f7bd1a" />
+          </View>
+          <View>
+            <Text style={styles.menuTitle}>Tambah Barang</Text>
+            <Text style={styles.menuDesc}>Input barang baru</Text>
+          </View>
+        </TouchableOpacity>
+
         <TouchableOpacity style={[styles.menuItem, styles.shadow]} onPress={() => router.push('/inventory' as any)}>
           <View style={[styles.iconCircle, { backgroundColor: '#000' }]}>
             <Ionicons name="cube-outline" size={28} color="#f7bd1a" />

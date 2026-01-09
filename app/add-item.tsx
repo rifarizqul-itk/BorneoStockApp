@@ -6,10 +6,11 @@ import { db } from '../firebaseConfig'; // Pastikan path benar
 
 export default function AddItemScreen() {
   const router = useRouter();
-  const { barcode } = useLocalSearchParams(); // Menangkap barcode dari ScanScreen
+  const { barcode: scannedBarcode } = useLocalSearchParams(); // Menangkap barcode dari ScanScreen
 
   // State Form
   const [form, setForm] = useState({
+    barcode: (scannedBarcode as string) || '',
     name: '',
     brand: '',
     model: '',
@@ -32,8 +33,8 @@ export default function AddItemScreen() {
 
     // Validasi Angka
     const stockVal = Number(form.stock);
-    const buyVal = Number(form.price_buy);
-    const sellVal = Number(form.price_sell);
+    const buyVal = Number(form.price_buy) || 0;
+    const sellVal = Number(form.price_sell) || 0;
 
     if (isNaN(stockVal) || isNaN(buyVal) || isNaN(sellVal)) {
       Alert.alert("Error", "Stok dan Harga harus berupa angka!");
@@ -44,7 +45,7 @@ export default function AddItemScreen() {
     try {
       await addDoc(collection(db, "inventory"), {
         ...form,
-        barcode: barcode || 'Manual Input',
+        barcode: form.barcode || '-',
         stock: stockVal,
         price_buy: buyVal,
         price_sell: sellVal,
@@ -62,7 +63,7 @@ export default function AddItemScreen() {
 
   const renderInput = (label: string, value: string, key: string, keyboardType: any = 'default') => (
     <View style={styles.inputGroup}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label}>{label} { key === 'name' || key === 'stock' ? '*' : ''}</Text>
       <TextInput
         style={styles.input}
         value={value}
@@ -76,15 +77,25 @@ export default function AddItemScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.barcodeText}>📦 Barcode: {barcode || 'Tidak ada barcode'}</Text>
+        <Text style={styles.barcodeText}>{scannedBarcode ? `Barcode: ${scannedBarcode}` : "Input Manual"}</Text>
       </View>
 
       <View style={styles.formCard}>
+        <View style={styles.inputGroup}>
+            <Text style={styles.label}>Barcode/ID Barang</Text>
+            <TextInput
+              style={styles.input}
+              value={form.barcode}
+              onChangeText={(text) => setForm({ ...form, barcode: text })}
+              placeholder="Masukkan Barcode/ID Barang"
+            />
+        </View>
+
         {renderInput("Nama Barang", form.name, 'name')}
-        {renderInput("Brand (Contoh: Apple, Samsung)", form.brand, 'brand')}
-        {renderInput("Seri Model (Contoh: iPhone 11)", form.model, 'model')}
-        {renderInput("Kategori (LCD, Baterai, dll)", form.category, 'category')}
-        {renderInput("Kualitas (Ori, Grade A, dll)", form.quality, 'quality')}
+        {renderInput("Brand", form.brand, 'brand')}
+        {renderInput("Seri Model", form.model, 'model')}
+        {renderInput("Kategori", form.category, 'category')}
+        {renderInput("Kualitas", form.quality, 'quality')}
         {renderInput("Jumlah Stok", form.stock, 'stock', 'numeric')}
         {renderInput("Harga Modal", form.price_buy, 'price_buy', 'numeric')}
         {renderInput("Harga Jual", form.price_sell, 'price_sell', 'numeric')}
