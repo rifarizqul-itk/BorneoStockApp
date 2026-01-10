@@ -3,22 +3,21 @@ import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Alert,
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { InventoryItem } from '../types/inventory';
 
 export default function AddItemScreen() {
   const router = useRouter();
   const { barcode: scannedBarcode } = useLocalSearchParams();
 
-  const [form, setForm] = useState<Omit<InventoryItem, 'id' | 'created_at'>>({
+  const [form, setForm] = useState({
     barcode: (scannedBarcode as string) || '',
     name: '',
     brand: '',
     model: '',
     category: '',
     quality: '',
-    stock: 0,
-    price_buy: 0,
-    price_sell: 0,
+    stock: '',
+    price_buy: '',
+    price_sell: '',
     location: '',
   });
 
@@ -51,27 +50,20 @@ export default function AddItemScreen() {
       });
       Alert.alert("Sukses", "Barang berhasil disimpan!");
       router.replace('/(tabs)');
-    } catch (error) {
-      console.error("Save error:", error);
+    } catch {
       Alert.alert("Error", "Gagal menyimpan data.");
     } finally {
       setLoading(false);
     }
   };
 
-  const renderInput = (label: string, value: string | number, key: keyof typeof form, keyboardType: any = 'default', placeholder: string) => (
+  const renderInput = (label: string, value: string, key: string, keyboardType: any = 'default', placeholder: string) => (
     <View style={styles.inputGroup}>
       <Text style={styles.label}>{label} { key === 'name' || key === 'stock' ? '*' : ''}</Text>
       <TextInput
         style={styles.input}
-        value={String(value)}
-        onChangeText={(text) => {
-          if (key === 'stock' || key === 'price_buy' || key === 'price_sell') {
-            setForm({ ...form, [key]: text === '' ? 0 : Number(text) });
-          } else {
-            setForm({ ...form, [key]: text });
-          }
-        }}
+        value={value}
+        onChangeText={(text) => setForm({ ...form, [key]: text })}
         placeholder={placeholder}
         placeholderTextColor="#ccc"
         keyboardType={keyboardType}
