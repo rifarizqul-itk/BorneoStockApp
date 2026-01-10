@@ -31,12 +31,9 @@ export default function HomeScreen() {
       {/* Profil & Header - Sesuai gaya 'get.jpg' */}
       <View style={styles.topHeader}>
         <View>
-          <Text style={styles.greeting}>Halo, Admin</Text>
-          <Text style={styles.brandName}>BORNEO <Text style={{color: '#f7bd1a'}}>SP</Text></Text>
+          <Text style={styles.greeting}>Halo,</Text>
+          <Text style={styles.brandName}>BORNEO SPECIALIS PONSEL</Text>
         </View>
-        <TouchableOpacity style={styles.profileCircle}>
-          <Ionicons name="person" size={24} color="#000" />
-        </TouchableOpacity>
       </View>
 
       {/* Ringkasan Statistik dalam Kartu Modern */}
@@ -54,7 +51,6 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.mainContent}>
-        <Text style={styles.sectionTitle}>Layanan Utama</Text>
         
         {/* Tombol Aksi - Gaya Kartu Vertikal Modern */}
         <TouchableOpacity 
@@ -114,7 +110,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20 
   },
   greeting: { fontSize: 14, color: '#888', fontWeight: '500' },
-  brandName: { fontSize: 24, fontWeight: '900', color: '#000', letterSpacing: -0.5 },
+  brandName: { fontSize: 20, fontWeight: '900', color: '#000', letterSpacing: -0.5 },
   profileCircle: { 
     width: 45, 
     height: 45, 
