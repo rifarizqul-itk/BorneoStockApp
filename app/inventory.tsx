@@ -5,12 +5,23 @@ import { db } from '../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
+interface InventoryItem {
+  id: string;
+  name?: string;
+  brand?: string;
+  model?: string;
+  category?: string;
+  location?: string;
+  stock?: number;
+  created_at?: any;
+}
+
 export default function InventoryScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions(); // Deteksi Lebar Layar
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<InventoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredItems, setFilteredItems] = useState<any[]>([]);
+  const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
 
   // Logika Kolom: 1 kolom di HP biasa/Cover Screen, 2 kolom di Main Screen Fold
   const numColumns = width > 700 ? 2 : 1;
@@ -18,9 +29,9 @@ export default function InventoryScreen() {
   useEffect(() => {
     const q = query(collection(db, "inventory"), orderBy("created_at", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const inventoryData: any[] = [];
+      const inventoryData: InventoryItem[] = [];
       querySnapshot.forEach((doc) => {
-        inventoryData.push({ id: doc.id, ...doc.data() });
+        inventoryData.push({ id: doc.id, ...doc.data() } as InventoryItem);
       });
       setItems(inventoryData);
       setFilteredItems(inventoryData);
@@ -37,7 +48,7 @@ export default function InventoryScreen() {
     setFilteredItems(filtered);
   }, [searchQuery, items]);
 
-  const renderItem = ({ item }: { item: any }) => (
+  const renderItem = ({ item }: { item: InventoryItem }) => (
     <TouchableOpacity 
         // Style dinamis untuk lebar kartu
         style={[styles.itemCard, { flex: 1/numColumns }]} 
