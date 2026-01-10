@@ -1,30 +1,30 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, TextInput, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { InventoryItem } from '../types/inventory';
+
+interface InventoryItem {
+  id: string;
+  name?: string;
+  brand?: string;
+  model?: string;
+  category?: string;
+  location?: string;
+  stock?: number;
+  created_at?: any;
+}
 
 export default function InventoryScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions(); // Deteksi Lebar Layar
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
 
   // Logika Kolom: 1 kolom di HP biasa/Cover Screen, 2 kolom di Main Screen Fold
   const numColumns = width > 700 ? 2 : 1;
-
-  // Gunakan useMemo untuk filtering - menggantikan state filteredItems dan useEffect kedua
-  const filteredItems = useMemo(() => {
-    if (!searchQuery.trim()) return items;
-    const query = searchQuery.toLowerCase();
-    return items.filter(item => 
-      item.name?.toLowerCase().includes(query) ||
-      item.model?.toLowerCase().includes(query) ||
-      item.brand?.toLowerCase().includes(query)
-    );
-  }, [items, searchQuery]);
 
   useEffect(() => {
     const q = query(collection(db, "inventory"), orderBy("created_at", "desc"));
@@ -34,11 +34,21 @@ export default function InventoryScreen() {
         inventoryData.push({ id: doc.id, ...doc.data() } as InventoryItem);
       });
       setItems(inventoryData);
+      setFilteredItems(inventoryData);
     });
     return () => unsubscribe();
   }, []);
 
-  const renderItem = useCallback(({ item }: { item: InventoryItem }) => (
+  useEffect(() => {
+    const filtered = items.filter(item => 
+      item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.model?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.brand?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredItems(filtered);
+  }, [searchQuery, items]);
+
+  const renderItem = ({ item }: { item: InventoryItem }) => (
     <TouchableOpacity 
         // Style dinamis untuk lebar kartu
         style={[styles.itemCard, { flex: 1/numColumns }]} 
@@ -64,11 +74,7 @@ export default function InventoryScreen() {
             <Text style={styles.stockLabel}>Stok</Text>
         </View>
     </TouchableOpacity>
-  ), [numColumns, router]);
-
-  const columnWrapperStyle = useMemo(() => 
-    numColumns > 1 ? { gap: 15 } : undefined
-  , [numColumns]);
+  );
 
   return (
     <View style={styles.container}>
@@ -88,7 +94,7 @@ export default function InventoryScreen() {
       <FlatList
         key={numColumns} // Kunci untuk mereset layout saat lipatan berubah
         numColumns={numColumns}
-        columnWrapperStyle={columnWrapperStyle}
+        columnWrapperStyle={numColumns > 1 ? { gap: 15 } : null} // Jarak antar kolom
         data={filteredItems}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}

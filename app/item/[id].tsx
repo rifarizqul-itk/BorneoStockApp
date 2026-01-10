@@ -4,12 +4,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
-import { InventoryItem } from '../../types/inventory';
 
 export default function ItemDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [item, setItem] = useState<InventoryItem | null>(null);
+  const [item, setItem] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -18,10 +17,9 @@ export default function ItemDetail() {
       const docRef = doc(db, "inventory", id as string);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        setItem(docSnap.data() as InventoryItem);
+        setItem(docSnap.data());
       }
-    } catch (error) {
-      console.error("Fetch error:", error);
+    } catch {
       Alert.alert("Error", "Gagal mengambil detail.");
     } finally {
       setLoading(false);
@@ -31,8 +29,8 @@ export default function ItemDetail() {
   useEffect(() => { fetchItem(); }, [fetchItem]);
 
   const handleUpdate = async () => {
-    if (!item || !item.name || !item.stock) {
-      Alert.alert("Error", "Data tidak valid!");
+    if (!item.name || !item.stock) {
+      Alert.alert("Error", "Nama barang dan Stok wajib diisi!");
       return;
     }
 
@@ -47,8 +45,7 @@ export default function ItemDetail() {
       Alert.alert("Sukses", "Data diperbarui!");
       setIsEditing(false);
       fetchItem();
-    } catch (error) {
-      console.error("Update error:", error);
+    } catch {
       Alert.alert("Error", "Gagal memperbarui data.");
     }
   };

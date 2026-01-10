@@ -42,8 +42,7 @@ export default function ScanScreen() {
           params: { barcode: data }
         });
       }
-    } catch (error) {
-      console.error("Scan error:", error);
+    } catch {
       Alert.alert("Error", "Gagal mengecek database.");
       setScanned(false);
     } finally {
