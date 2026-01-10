@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-
-const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const router = useRouter();
