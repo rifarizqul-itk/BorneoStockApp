@@ -11,10 +11,8 @@ export default function InventoryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<any[]>([]);
 
-  // 1. Ambil data secara Real-time dari Firebase
   useEffect(() => {
     const q = query(collection(db, "inventory"), orderBy("created_at", "desc"));
-    
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const inventoryData: any[] = [];
       querySnapshot.forEach((doc) => {
@@ -23,11 +21,9 @@ export default function InventoryScreen() {
       setItems(inventoryData);
       setFilteredItems(inventoryData);
     });
-
-    return () => unsubscribe(); // Stop listening saat halaman ditutup
+    return () => unsubscribe();
   }, []);
 
-  // 2. Logika Pencarian
   useEffect(() => {
     const filtered = items.filter(item => 
       item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -40,41 +36,43 @@ export default function InventoryScreen() {
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
         style={styles.itemCard} 
-        onPress={() => router.push(`/item/${item.id}` as any)} // Navigasi ke detail
+        onPress={() => router.push(`/item/${item.id}` as any)}
     >
         <View style={styles.itemInfo}>
             <Text style={styles.itemName}>{item.name}</Text>
-            <Text style={styles.itemSub}>{item.brand} - {item.model}</Text>
-            <View style={{flexDirection: 'row', gap: 5, marginTop: 5}}>
-                <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{item.category || 'Sparepart'}</Text>
+            <Text style={styles.itemSub}>{item.brand} • {item.model}</Text>
+            <View style={styles.badgeRow}>
+                <View style={styles.categoryBadge}>
+                    <Text style={styles.categoryText}>{item.category || 'Sparepart'}</Text>
                 </View>
                 {item.location && (
-                    <View style={[styles.badge, {backgroundColor: '#eee'}]}>
-                        <Text style={[styles.badgeText, {color: '#666'}]}>{item.location}</Text>
+                    <View style={styles.locationBadge}>
+                        <Ionicons name="location-outline" size={12} color="#888" />
+                        <Text style={styles.locationText}>{item.location}</Text>
                     </View>
                 )}
             </View>
         </View>
-        <View style={styles.stockContainer}>
-        <Text style={styles.stockLabel}>STOK</Text>
-        <Text style={styles.stockValue}>{item.stock}</Text>
+        <View style={styles.stockBox}>
+            <Text style={styles.stockValue}>{item.stock}</Text>
+            <Text style={styles.stockLabel}>Stok</Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#ccc" />
     </TouchableOpacity>
-    );
+  );
 
   return (
     <View style={styles.container}>
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#888" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Cari barang atau tipe HP..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+      <View style={styles.searchWrapper}>
+        <View style={styles.searchBar}>
+            <Ionicons name="search-outline" size={20} color="#888" />
+            <TextInput
+            style={styles.searchInput}
+            placeholder="Cari barang atau tipe HP..."
+            placeholderTextColor="#888"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            />
+        </View>
       </View>
 
       <FlatList
@@ -82,8 +80,11 @@ export default function InventoryScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>Barang tidak ditemukan atau stok kosong.</Text>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Barang tidak ditemukan.</Text>
+          </View>
         }
       />
     </View>
@@ -91,43 +92,45 @@ export default function InventoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f4f4f4' },
-  searchContainer: { 
+  container: { flex: 1, backgroundColor: '#ffffff' },
+  searchWrapper: { padding: 20, backgroundColor: '#ffffff' },
+  searchBar: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    backgroundColor: '#fff', 
-    margin: 15, 
+    backgroundColor: '#f8f8f8', 
     paddingHorizontal: 15, 
-    borderRadius: 10,
+    borderRadius: 15,
     borderWidth: 1,
-    borderColor: '#ddd'
+    borderColor: '#eee'
   },
-  searchIcon: { marginRight: 10 },
-  searchInput: { flex: 1, paddingVertical: 12, fontSize: 16 },
-  listContent: { paddingHorizontal: 15, paddingBottom: 20 },
+  searchInput: { flex: 1, paddingVertical: 12, fontSize: 15, marginLeft: 10, color: '#000' },
+  listContent: { paddingHorizontal: 20, paddingBottom: 20 },
   itemCard: { 
     backgroundColor: '#fff', 
     flexDirection: 'row', 
-    padding: 15, 
-    borderRadius: 12, 
-    marginBottom: 10,
+    padding: 18, 
+    borderRadius: 20, 
+    marginBottom: 15,
     alignItems: 'center',
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
   },
   itemInfo: { flex: 1 },
   itemName: { fontSize: 16, fontWeight: 'bold', color: '#000' },
-  itemSub: { fontSize: 13, color: '#666', marginTop: 2 },
-  badge: { 
-    backgroundColor: '#f7bd1a', 
-    alignSelf: 'flex-start', 
-    paddingHorizontal: 8, 
-    paddingVertical: 2, 
-    borderRadius: 5, 
-    marginTop: 5 
-  },
-  badgeText: { fontSize: 10, fontWeight: 'bold', color: '#000' },
-  stockContainer: { alignItems: 'center', minWidth: 50 },
-  stockLabel: { fontSize: 10, fontWeight: 'bold', color: '#888' },
-  stockValue: { fontSize: 20, fontWeight: 'bold', color: '#000' },
-  emptyText: { textAlign: 'center', marginTop: 50, color: '#888' }
+  itemSub: { fontSize: 13, color: '#888', marginTop: 2 },
+  badgeRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  categoryBadge: { backgroundColor: '#f7bd1a', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  categoryText: { fontSize: 10, fontWeight: 'bold', color: '#000' },
+  locationBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0f0f0', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, gap: 4 },
+  locationText: { fontSize: 10, color: '#888', fontWeight: '500' },
+  stockBox: { alignItems: 'center', backgroundColor: '#fafafa', padding: 10, borderRadius: 12, minWidth: 55 },
+  stockValue: { fontSize: 18, fontWeight: '900', color: '#000' },
+  stockLabel: { fontSize: 10, color: '#888', fontWeight: 'bold' },
+  emptyContainer: { marginTop: 100, alignItems: 'center' },
+  emptyText: { color: '#ccc', fontSize: 16 },
 });

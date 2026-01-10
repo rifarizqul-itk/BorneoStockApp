@@ -53,11 +53,11 @@ export default function ItemDetail() {
   if (loading) return <ActivityIndicator size="large" color="#f7bd1a" style={{marginTop: 50}} />;
   if (!item) return <View style={styles.container}><Text>Barang tidak ditemukan.</Text></View>;
 
-  const renderField = (label: string, value: string, key: string, keyboard: any = 'default') => (
-    <View style={styles.inputGroup}>
-      <Text style={styles.label}>{label}</Text>
+  const renderEditField = (label: string, value: string, key: string, keyboard: any = 'default') => (
+    <View style={styles.editGroup}>
+      <Text style={styles.editLabel}>{label}</Text>
       <TextInput
-        style={[styles.input, !isEditing && styles.inputDisabled]}
+        style={styles.editInput}
         value={value?.toString()}
         editable={isEditing}
         keyboardType={keyboard}
@@ -67,68 +67,87 @@ export default function ItemDetail() {
   );
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.categoryBadge}>{item.category || 'Sparepart'}</Text>
-          <TouchableOpacity 
-            style={[styles.editButton, {backgroundColor: isEditing ? '#2e7d32' : '#f7bd1a'}]} 
-            onPress={() => isEditing ? handleUpdate() : setIsEditing(true)}
-          >
-            <Text style={styles.editButtonText}>{isEditing ? "SIMPAN" : "EDIT"}</Text>
-          </TouchableOpacity>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Header Elegan */}
+      <View style={styles.topSection}>
+        <View style={styles.headerInfo}>
+            <View style={styles.badge}>
+                <Text style={styles.badgeText}>{item.category || 'PRODUK'}</Text>
+            </View>
+            <Text style={styles.title}>{item.name}</Text>
+            <Text style={styles.subtitle}>{item.brand} • {item.model}</Text>
         </View>
-        <Text style={styles.title}>{item.name}</Text>
-        <Text style={styles.subtitle}>{item.brand} {item.model} - {item.quality}</Text>
+        <TouchableOpacity 
+          style={[styles.editCircle, {backgroundColor: isEditing ? '#000' : '#f7bd1a'}]} 
+          onPress={() => isEditing ? handleUpdate() : setIsEditing(true)}
+        >
+          <Ionicons name={isEditing ? "checkmark" : "create-outline"} size={24} color={isEditing ? "#f7bd1a" : "#000"} />
+        </TouchableOpacity>
       </View>
 
       {!isEditing ? (
-        // Tampilan Mode Lihat (View Mode)
-        <View style={styles.viewContainer}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Informasi Harga</Text>
-            <View style={styles.priceRow}>
-              <View style={styles.priceBox}>
-                <Text style={styles.priceLabel}>Harga Modal</Text>
-                <Text style={styles.priceValue}>Rp {(Number(item.price_buy) || 0).toLocaleString('id-ID')}</Text>
-              </View>
-              <View style={styles.priceBox}>
-                <Text style={styles.priceLabel}>Harga Jual</Text>
-                <Text style={[styles.priceValue, {color: '#2e7d32'}]}>Rp {(Number(item.price_sell) || 0).toLocaleString('id-ID')}</Text>
-              </View>
+        <View style={styles.content}>
+          {/* Kartu Stok Gede */}
+          <View style={styles.mainCard}>
+            <View style={styles.stockInfo}>
+                <Text style={styles.stockValue}>{item.stock}</Text>
+                <Text style={styles.stockLabel}>UNIT TERSEDIA</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.locationInfo}>
+                <Ionicons name="location" size={20} color="#f7bd1a" />
+                <Text style={styles.locationText}>{item.location || 'Rak belum diatur'}</Text>
             </View>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Manajemen Stok</Text>
-            <View style={styles.stockDisplay}>
-              <Text style={styles.stockText}>{item.stock}</Text>
-              <Text style={styles.stockSub}>Unit Tersedia</Text>
+          {/* Kartu Harga */}
+          <Text style={styles.sectionHeader}>Detail Harga</Text>
+          <View style={styles.infoRow}>
+            <View style={[styles.infoCard, {flex:1}]}>
+                <Text style={styles.infoLabel}>Harga Modal</Text>
+                <Text style={styles.infoValue}>Rp {(Number(item.price_buy) || 0).toLocaleString('id-ID')}</Text>
             </View>
-            <Text style={styles.infoText}>Lokasi Rak: {item.location || '-'}</Text>
-            <Text style={styles.infoText}>Barcode: {item.barcode || '-'}</Text>
+            <View style={[styles.infoCard, {flex:1, borderLeftWidth: 4, borderLeftColor: '#f7bd1a'}]}>
+                <Text style={styles.infoLabel}>Harga Jual</Text>
+                <Text style={[styles.infoValue, {color: '#000'}]}>Rp {(Number(item.price_sell) || 0).toLocaleString('id-ID')}</Text>
+            </View>
+          </View>
+
+          {/* Detail Tambahan */}
+          <View style={styles.listCard}>
+             <View style={styles.listItem}>
+                <Text style={styles.listLabel}>Kualitas</Text>
+                <Text style={styles.listValue}>{item.quality || '-'}</Text>
+             </View>
+             <View style={styles.listItem}>
+                <Text style={styles.listLabel}>Barcode</Text>
+                <Text style={styles.listValue}>{item.barcode || '-'}</Text>
+             </View>
           </View>
         </View>
       ) : (
-        // Tampilan Mode Edit
-        <View style={styles.formCard}>
-          {renderField("Nama Barang *", item.name, 'name')}
-          {renderField("Barcode / ID", item.barcode, 'barcode')}
-          {renderField("Brand", item.brand, 'brand')}
-          {renderField("Model", item.model, 'model')}
-          {renderField("Kualitas", item.quality, 'quality')}
-          {renderField("Kategori", item.category, 'category')}
-          {renderField("Stok *", item.stock, 'stock', 'numeric')}
-          {renderField("Harga Modal", item.price_buy, 'price_buy', 'numeric')}
-          {renderField("Harga Jual", item.price_sell, 'price_sell', 'numeric')}
-          {renderField("Lokasi Rak", item.location, 'location')}
+        <View style={styles.editForm}>
+          {renderEditField("Nama Barang", item.name, 'name')}
+          <View style={styles.row}>
+            <View style={{flex:1}}>{renderEditField("Brand", item.brand, 'brand')}</View>
+            <View style={{flex:1}}>{renderEditField("Model", item.model, 'model')}</View>
+          </View>
+          <View style={styles.row}>
+            <View style={{flex:1}}>{renderEditField("Stok", item.stock, 'stock', 'numeric')}</View>
+            <View style={{flex:1}}>{renderEditField("Lokasi", item.location, 'location')}</View>
+          </View>
+          <View style={styles.row}>
+            <View style={{flex:1}}>{renderEditField("Harga Modal", item.price_buy, 'price_buy', 'numeric')}</View>
+            <View style={{flex:1}}>{renderEditField("Harga Jual", item.price_sell, 'price_sell', 'numeric')}</View>
+          </View>
+          {renderEditField("Barcode", item.barcode, 'barcode')}
         </View>
       )}
 
       <TouchableOpacity 
-        style={styles.deleteButton} 
+        style={styles.deleteAction} 
         onPress={() => {
-          Alert.alert("Hapus", "Hapus barang ini?", [
+          Alert.alert("Hapus Barang", "Tindakan ini permanen. Lanjutkan?", [
             { text: "Batal", style: "cancel" },
             { text: "Hapus", style: "destructive", onPress: async () => {
               await deleteDoc(doc(db, "inventory", id as string));
@@ -137,37 +156,61 @@ export default function ItemDetail() {
           ]);
         }}
       >
-        <Ionicons name="trash-outline" size={20} color="red" />
-        <Text style={{color: 'red', fontWeight: 'bold'}}>Hapus Barang</Text>
+        <Text style={styles.deleteText}>Hapus Barang dari Sistem</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: { padding: 25, backgroundColor: '#000' },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  categoryBadge: { backgroundColor: '#f7bd1a', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 5, fontSize: 12, fontWeight: 'bold' },
-  editButton: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 5 },
-  editButtonText: { fontWeight: 'bold', color: '#000' },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginTop: 15 },
-  subtitle: { fontSize: 14, color: '#ccc', marginTop: 5 },
-  viewContainer: { padding: 0 },
-  section: { padding: 20, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 15, color: '#333' },
-  priceRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  priceBox: { width: '48%' },
-  priceLabel: { fontSize: 12, color: '#888' },
-  priceValue: { fontSize: 18, fontWeight: 'bold', marginTop: 5 },
-  stockDisplay: { backgroundColor: '#f9f9f9', padding: 20, borderRadius: 10, alignItems: 'center', marginBottom: 15 },
-  stockText: { fontSize: 32, fontWeight: 'bold', color: '#000' },
-  stockSub: { fontSize: 12, color: '#888' },
-  infoText: { fontSize: 14, color: '#666', marginTop: 10 },
-  formCard: { padding: 20 },
-  inputGroup: { marginBottom: 15 },
-  label: { fontSize: 12, fontWeight: 'bold', color: '#888', marginBottom: 5 },
-  input: { borderWidth: 1, borderColor: '#ddd', padding: 10, borderRadius: 8, fontSize: 16, color: '#000' },
-  inputDisabled: { backgroundColor: '#f9f9f9', color: '#666', borderColor: '#eee' },
-  deleteButton: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', padding: 30, gap: 10, marginBottom: 20 },
+  container: { flex: 1, backgroundColor: '#ffffff' },
+  topSection: { 
+    padding: 30, 
+    paddingTop: 60, 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-start' 
+  },
+  headerInfo: { flex: 1 },
+  badge: { backgroundColor: '#000', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8, marginBottom: 12 },
+  badgeText: { color: '#f7bd1a', fontSize: 10, fontWeight: 'bold' },
+  title: { fontSize: 26, fontWeight: '900', color: '#000' },
+  subtitle: { fontSize: 16, color: '#888', marginTop: 4 },
+  editCircle: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', elevation: 5 },
+  content: { paddingHorizontal: 25 },
+  mainCard: { 
+    backgroundColor: '#fff', 
+    padding: 25, 
+    borderRadius: 30, 
+    borderWidth: 1, 
+    borderColor: '#f0f0f0', 
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 15,
+  },
+  stockInfo: { alignItems: 'center' },
+  stockValue: { fontSize: 48, fontWeight: '900', color: '#000' },
+  stockLabel: { fontSize: 12, fontWeight: 'bold', color: '#888', letterSpacing: 1 },
+  divider: { height: 1, width: '100%', backgroundColor: '#f0f0f0', marginVertical: 20 },
+  locationInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  locationText: { fontSize: 16, fontWeight: 'bold', color: '#444' },
+  sectionHeader: { fontSize: 18, fontWeight: '900', color: '#000', marginTop: 30, marginBottom: 15 },
+  infoRow: { flexDirection: 'row', gap: 15 },
+  infoCard: { backgroundColor: '#f8f8f8', padding: 20, borderRadius: 20 },
+  infoLabel: { fontSize: 10, fontWeight: 'bold', color: '#888', marginBottom: 5 },
+  infoValue: { fontSize: 16, fontWeight: '900' },
+  listCard: { backgroundColor: '#fff', marginTop: 20, borderRadius: 25, borderWidth: 1, borderColor: '#f0f0f0', padding: 10 },
+  listItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, borderBottomWidth: 1, borderBottomColor: '#f8f8f8' },
+  listLabel: { color: '#888', fontWeight: 'bold' },
+  listValue: { color: '#000', fontWeight: 'bold' },
+  editForm: { padding: 25 },
+  editGroup: { marginBottom: 20 },
+  editLabel: { fontSize: 10, fontWeight: 'bold', color: '#ccc', marginBottom: 8, textTransform: 'uppercase' },
+  editInput: { backgroundColor: '#f9f9f9', padding: 15, borderRadius: 15, fontSize: 16, fontWeight: 'bold', color: '#000' },
+  row: { flexDirection: 'row', gap: 15 },
+  deleteAction: { marginTop: 40, marginBottom: 50, alignItems: 'center' },
+  deleteText: { color: '#ff4d4d', fontWeight: 'bold', textDecorationLine: 'underline' }
 });

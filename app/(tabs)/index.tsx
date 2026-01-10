@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
+
+const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -11,77 +13,92 @@ export default function HomeScreen() {
   const [lowStockCount, setLowStockCount] = useState(0);
 
   useEffect(() => {
-    // Listener real-time untuk menghitung statistik stok
     const q = query(collection(db, "inventory"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let total = 0;
       let lowStock = 0;
-      
       snapshot.forEach((doc) => {
         const data = doc.data();
         total += 1;
-        // Ambang batas stok rendah (misal: < 5)
-        if (Number(data.stock) < 5) {
-          lowStock += 1;
-        }
+        if (Number(data.stock) < 5) lowStock += 1;
       });
-      
       setTotalItems(total);
       setLowStockCount(lowStock);
     });
-
     return () => unsubscribe();
   }, []);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.headerContainer}>
-        <Text style={styles.brandTitle}>BORNEO</Text>
-        <Text style={styles.brandSubtitle}>Specialis Ponsel Dashboard</Text>
+      {/* Profil & Header - Sesuai gaya 'get.jpg' */}
+      <View style={styles.topHeader}>
+        <View>
+          <Text style={styles.greeting}>Halo, Admin</Text>
+          <Text style={styles.brandName}>BORNEO <Text style={{color: '#f7bd1a'}}>SP</Text></Text>
+        </View>
+        <TouchableOpacity style={styles.profileCircle}>
+          <Ionicons name="person" size={24} color="#000" />
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.summaryRow}>
-          <View style={[styles.card, styles.shadow]}>
-            <Text style={styles.cardLabel}>TOTAL JENIS</Text>
-            <Text style={styles.cardValue}>{totalItems}</Text>
-          </View>
-          <View style={[styles.card, styles.shadow, { borderLeftColor: lowStockCount > 0 ? '#FF3B30' : '#f7bd1a', borderLeftWidth: 5 }]}>
-            <Text style={styles.cardLabel}>STOK MENIPIS</Text>
-            <Text style={[styles.cardValue, { color: lowStockCount > 0 ? '#FF3B30' : '#000' }]}>{lowStockCount}</Text>
-          </View>
+      {/* Ringkasan Statistik dalam Kartu Modern */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statCard}>
+          <Text style={styles.statLabel}>Total Jenis</Text>
+          <Text style={styles.statNumber}>{totalItems}</Text>
+          <View style={[styles.indicator, {backgroundColor: '#f7bd1a'}]} />
         </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statLabel}>Stok Menipis</Text>
+          <Text style={[styles.statNumber, lowStockCount > 0 && {color: '#ff4d4d'}]}>{lowStockCount}</Text>
+          <View style={[styles.indicator, {backgroundColor: lowStockCount > 0 ? '#ff4d4d' : '#28a745'}]} />
+        </View>
+      </View>
 
-        <Text style={styles.sectionTitle}>Menu Utama</Text>
+      <View style={styles.mainContent}>
+        <Text style={styles.sectionTitle}>Layanan Utama</Text>
         
-        <TouchableOpacity style={[styles.menuItem, styles.shadow]} onPress={() => router.push('/scan' as any)}>
-          <View style={[styles.iconCircle, { backgroundColor: '#f7bd1a' }]}>
-            <Ionicons name="barcode-outline" size={28} color="#000" />
+        {/* Tombol Aksi - Gaya Kartu Vertikal Modern */}
+        <TouchableOpacity 
+          style={styles.actionCard} 
+          onPress={() => router.push('/scan' as any)}
+        >
+          <View style={[styles.iconBox, {backgroundColor: '#000'}]}>
+            <Ionicons name="barcode-outline" size={30} color="#f7bd1a" />
           </View>
-          <View>
-            <Text style={styles.menuTitle}>Scan Barcode</Text>
-            <Text style={styles.menuDesc}>Input atau cari barang via kamera</Text>
+          <View style={styles.actionTextContent}>
+            <Text style={styles.actionTitle}>Scan Barcode</Text>
+            <Text style={styles.actionSub}>Cari atau input barang cepat</Text>
           </View>
+          <Ionicons name="chevron-forward" size={20} color="#ccc" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.menuItem, styles.shadow]} onPress={() => router.push('/add-item' as any)}>
-          <View style={[styles.iconCircle, { backgroundColor: '#333' }]}>
-            <Ionicons name="create-outline" size={28} color="#f7bd1a" />
+        <TouchableOpacity 
+          style={styles.actionCard} 
+          onPress={() => router.push('/inventory' as any)}
+        >
+          <View style={[styles.iconBox, {backgroundColor: '#f7bd1a'}]}>
+            <Ionicons name="cube-outline" size={30} color="#000" />
           </View>
-          <View>
-            <Text style={styles.menuTitle}>Tambah Barang</Text>
-            <Text style={styles.menuDesc}>Input barang baru</Text>
+          <View style={styles.actionTextContent}>
+            <Text style={styles.actionTitle}>Daftar Stok</Text>
+            <Text style={styles.actionSub}>Kelola database sparepart</Text>
           </View>
+          <Ionicons name="chevron-forward" size={20} color="#ccc" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.menuItem, styles.shadow]} onPress={() => router.push('/inventory' as any)}>
-          <View style={[styles.iconCircle, { backgroundColor: '#000' }]}>
-            <Ionicons name="cube-outline" size={28} color="#f7bd1a" />
+        <TouchableOpacity 
+          style={styles.actionCard} 
+          onPress={() => router.push('/add-item' as any)}
+        >
+          <View style={[styles.iconBox, {backgroundColor: '#eeeeee'}]}>
+            <Ionicons name="add-outline" size={30} color="#000" />
           </View>
-          <View>
-            <Text style={styles.menuTitle}>Daftar Stok</Text>
-            <Text style={styles.menuDesc}>Lihat dan edit manajemen barang</Text>
+          <View style={styles.actionTextContent}>
+            <Text style={styles.actionTitle}>Input Manual</Text>
+            <Text style={styles.actionSub}>Tambah tanpa barcode</Text>
           </View>
+          <Ionicons name="chevron-forward" size={20} color="#ccc" />
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -89,19 +106,68 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
-  headerContainer: { backgroundColor: '#000', paddingTop: 60, paddingBottom: 40, paddingHorizontal: 25, borderBottomRightRadius: 50 },
-  brandTitle: { fontSize: 32, fontWeight: '900', color: '#f7bd1a', letterSpacing: 2 },
-  brandSubtitle: { fontSize: 16, color: '#fff', fontWeight: '500' },
-  content: { paddingHorizontal: 20, marginTop: -30 },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 },
-  card: { backgroundColor: '#fff', width: '47%', padding: 15, borderRadius: 15 },
-  shadow: { elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 5 },
-  cardLabel: { fontSize: 10, fontWeight: 'bold', color: '#888', marginBottom: 5 },
-  cardValue: { fontSize: 24, fontWeight: 'bold', color: '#333' },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 15 },
-  menuItem: { backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', padding: 18, borderRadius: 20, marginBottom: 15 },
-  iconCircle: { width: 55, height: 55, borderRadius: 27.5, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  menuTitle: { fontSize: 16, fontWeight: '700', color: '#333' },
-  menuDesc: { fontSize: 12, color: '#888' }
+  container: { flex: 1, backgroundColor: '#ffffff' },
+  topHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 25, 
+    paddingTop: 60, 
+    paddingBottom: 20 
+  },
+  greeting: { fontSize: 14, color: '#888', fontWeight: '500' },
+  brandName: { fontSize: 24, fontWeight: '900', color: '#000', letterSpacing: -0.5 },
+  profileCircle: { 
+    width: 45, 
+    height: 45, 
+    borderRadius: 25, 
+    backgroundColor: '#f7bd1a', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  statsContainer: { 
+    flexDirection: 'row', 
+    paddingHorizontal: 20, 
+    justifyContent: 'space-between', 
+    marginTop: 10 
+  },
+  statCard: { 
+    backgroundColor: '#fff', 
+    width: '47%', 
+    padding: 20, 
+    borderRadius: 20, 
+    borderWidth: 1, 
+    borderColor: '#f0f0f0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+  },
+  statLabel: { fontSize: 12, color: '#888', fontWeight: 'bold', marginBottom: 5 },
+  statNumber: { fontSize: 28, fontWeight: '900', color: '#000' },
+  indicator: { height: 4, width: 30, borderRadius: 2, marginTop: 10 },
+  mainContent: { paddingHorizontal: 25, marginTop: 30 },
+  sectionTitle: { fontSize: 18, fontWeight: '900', color: '#000', marginBottom: 20 },
+  actionCard: { 
+    backgroundColor: '#fff', 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 15, 
+    borderRadius: 20, 
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#f4f4f4',
+  },
+  iconBox: { 
+    width: 60, 
+    height: 60, 
+    borderRadius: 15, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginRight: 15 
+  },
+  actionTextContent: { flex: 1 },
+  actionTitle: { fontSize: 16, fontWeight: 'bold', color: '#000' },
+  actionSub: { fontSize: 12, color: '#888', marginTop: 2 },
 });
