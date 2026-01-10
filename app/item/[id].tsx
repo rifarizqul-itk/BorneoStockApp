@@ -67,7 +67,11 @@ export default function ItemDetail() {
   );
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ alignSelf: 'center', width: '100%', maxWidth: 800 }}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Header Elegan */}
       <View style={styles.topSection}>
         <View style={styles.headerInfo}>

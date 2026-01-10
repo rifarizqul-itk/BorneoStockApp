@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TextInput, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,9 +7,13 @@ import { useRouter } from 'expo-router';
 
 export default function InventoryScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions(); // Deteksi Lebar Layar
   const [items, setItems] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<any[]>([]);
+
+  // Logika Kolom: 1 kolom di HP biasa/Cover Screen, 2 kolom di Main Screen Fold
+  const numColumns = width > 700 ? 2 : 1;
 
   useEffect(() => {
     const q = query(collection(db, "inventory"), orderBy("created_at", "desc"));
@@ -35,11 +39,12 @@ export default function InventoryScreen() {
 
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
-        style={styles.itemCard} 
+        // Style dinamis untuk lebar kartu
+        style={[styles.itemCard, { flex: 1/numColumns }]} 
         onPress={() => router.push(`/item/${item.id}` as any)}
     >
         <View style={styles.itemInfo}>
-            <Text style={styles.itemName}>{item.name}</Text>
+            <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
             <Text style={styles.itemSub}>{item.brand} • {item.model}</Text>
             <View style={styles.badgeRow}>
                 <View style={styles.categoryBadge}>
@@ -76,6 +81,9 @@ export default function InventoryScreen() {
       </View>
 
       <FlatList
+        key={numColumns} // Kunci untuk mereset layout saat lipatan berubah
+        numColumns={numColumns}
+        columnWrapperStyle={numColumns > 1 ? { gap: 15 } : null} // Jarak antar kolom
         data={filteredItems}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
@@ -120,11 +128,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 10,
   },
-  itemInfo: { flex: 1 },
+  itemInfo: { flex: 1, paddingRight: 10 },
   itemName: { fontSize: 16, fontWeight: 'bold', color: '#000' },
   itemSub: { fontSize: 13, color: '#888', marginTop: 2 },
   badgeRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  categoryBadge: { backgroundColor: '#f7bd1a', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  categoryBadge: { backgroundColor: '#f7bd1a', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start' },
   categoryText: { fontSize: 10, fontWeight: 'bold', color: '#000' },
   locationBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0f0f0', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, gap: 4 },
   locationText: { fontSize: 10, color: '#888', fontWeight: '500' },
