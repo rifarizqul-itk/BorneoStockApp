@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
+import { Colors, Spacing, BorderRadius, FontSize, Shadow } from '@/constants/theme';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -27,75 +28,71 @@ export default function HomeScreen() {
       {/* Container Penampung untuk Optimasi Layar Lebar */}
       <View style={[styles.contentWrapper, isWideScreen && styles.wideContent]}>
         
-        {/* Header - Sesuai request (Tanpa lingkaran profil, teks lengkap) */}
+        {/* Header - Logo Kiri + Avatar Kanan */}
         <View style={styles.topHeader}>
-          <View>
-            <Text style={styles.greeting}>Halo,</Text>
-            <Text style={styles.brandName}>BORNEO SPECIALIS PONSEL</Text>
+          <Text style={styles.brandName}>BORNEO STOCK</Text>
+          <View style={styles.avatarCircle}>
+            <Ionicons name="person" size={24} color={Colors.text.onPrimary} />
           </View>
         </View>
 
-        {/* Statistik - Hanya Satu Kartu 'Hero' (Total Jenis) */}
+        {/* Statistik Card - Full Background Kuning */}
         <View style={styles.statsContainer}>
-          <View style={[styles.statCard, styles.heroCard]}>
+          <View style={styles.heroCard}>
             <View>
-              <Text style={styles.statLabel}>TOTAL JENIS BARANG</Text>
-              <Text style={styles.statNumber}>{totalItems}</Text>
+              <Text style={styles.heroLabel}>Total Jenis Barang</Text>
+              <Text style={styles.heroNumber}>{totalItems}</Text>
             </View>
-            {/* Ikon Dekorasi di kanan kartu */}
-            <View style={styles.heroIcon}>
-               <Ionicons name="cube" size={40} color="#f7bd1a" />
+            {/* Progress Bar */}
+            <View style={styles.progressBar}>
+              <View style={styles.progressFill} />
             </View>
           </View>
         </View>
 
-        {/* Menu Utama - Grid System untuk Fold */}
+        {/* Menu Grid - 2 Kolom */}
         <View style={styles.mainContent}>
-          
-          <View style={isWideScreen ? styles.menuGrid : null}>
+          <View style={styles.menuGrid}>
             <TouchableOpacity 
-              style={[styles.actionCard, isWideScreen && styles.gridCard]} 
+              style={styles.menuCard} 
               onPress={() => router.push('/scan' as any)}
             >
-              <View style={[styles.iconBox, {backgroundColor: '#000'}]}>
-                <Ionicons name="barcode-outline" size={30} color="#f7bd1a" />
+              <View style={styles.menuIconBox}>
+                <Ionicons name="barcode-outline" size={32} color={Colors.primary} />
               </View>
-              <View style={styles.actionTextContent}>
-                <Text style={styles.actionTitle}>Scan Barcode</Text>
-                <Text style={styles.actionSub}>Cari atau input barang cepat</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
+              <Text style={styles.menuTitle}>Scan Barcode</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.actionCard, isWideScreen && styles.gridCard]} 
+              style={styles.menuCard} 
               onPress={() => router.push('/inventory' as any)}
             >
-              <View style={[styles.iconBox, {backgroundColor: '#f7bd1a'}]}>
-                <Ionicons name="cube-outline" size={30} color="#000" />
+              <View style={styles.menuIconBox}>
+                <Ionicons name="cube-outline" size={32} color={Colors.primary} />
               </View>
-              <View style={styles.actionTextContent}>
-                <Text style={styles.actionTitle}>Daftar Stok</Text>
-                <Text style={styles.actionSub}>Kelola database sparepart</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
+              <Text style={styles.menuTitle}>Daftar Stok</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.actionCard, isWideScreen && styles.gridCard]} 
+              style={styles.menuCard} 
               onPress={() => router.push('/add-item' as any)}
             >
-              <View style={[styles.iconBox, {backgroundColor: '#eeeeee'}]}>
-                <Ionicons name="add-outline" size={30} color="#000" />
+              <View style={styles.menuIconBox}>
+                <Ionicons name="add-outline" size={32} color={Colors.primary} />
               </View>
-              <View style={styles.actionTextContent}>
-                <Text style={styles.actionTitle}>Input Manual</Text>
-                <Text style={styles.actionSub}>Tambah tanpa barcode</Text>
+              <Text style={styles.menuTitle}>Input Manual</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.menuCard} 
+              onPress={() => {}}
+            >
+              <View style={styles.menuIconBox}>
+                <Ionicons name="stats-chart-outline" size={32} color={Colors.primary} />
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
+              <Text style={styles.menuTitle}>Laporan</Text>
             </TouchableOpacity>
           </View>
-
         </View>
       </View>
     </ScrollView>
@@ -103,76 +100,101 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
-  // Tambahan Styles untuk Fold
+  container: { 
+    flex: 1, 
+    backgroundColor: Colors.background.main // #fafafa
+  },
   contentWrapper: { flex: 1, paddingBottom: 50 },
-  wideContent: { alignSelf: 'center', width: '95%', maxWidth: 1000 }, 
-  menuGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  gridCard: { width: '48%' }, 
+  wideContent: { alignSelf: 'center', width: '95%', maxWidth: 1000 },
   
-  topHeader: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingHorizontal: 25, 
-    paddingTop: 60, 
-    paddingBottom: 20 
-  },
-  greeting: { fontSize: 14, color: '#888', fontWeight: '500' },
-  brandName: { fontSize: 20, fontWeight: '900', color: '#000', letterSpacing: -0.5 },
-  
-  statsContainer: { 
-    paddingHorizontal: 20, 
-    marginTop: 10 
-  },
-  statCard: { 
-    backgroundColor: '#fff', 
-    padding: 25, 
-    borderRadius: 25, 
-    borderWidth: 1, 
-    borderColor: '#f0f0f0',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-  },
-  heroCard: {
-    width: '100%', // Full width karena cuma satu
+  // Header
+  topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff', 
-    borderLeftWidth: 6, // Aksen kuning di kiri
-    borderLeftColor: '#f7bd1a'
+    paddingHorizontal: Spacing.pagePadding,
+    paddingTop: Spacing.pageTop,
+    paddingBottom: Spacing.md,
   },
-  statLabel: { fontSize: 12, color: '#888', fontWeight: 'bold', marginBottom: 5, letterSpacing: 1 },
-  statNumber: { fontSize: 36, fontWeight: '900', color: '#000' },
-  heroIcon: { 
-    opacity: 0.1, // Transparan agar estetik
-    transform: [{ scale: 1.5 }] 
+  brandName: {
+    fontSize: FontSize.h2,
+    fontFamily: 'Poppins_700Bold',
+    color: Colors.text.primary,
+  },
+  avatarCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   
-  mainContent: { paddingHorizontal: 25, marginTop: 30 },
-  sectionTitle: { fontSize: 18, fontWeight: '900', color: '#000', marginBottom: 20 },
-  actionCard: { 
-    backgroundColor: '#fff', 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    padding: 15, 
-    borderRadius: 20, 
-    marginBottom: 15,
+  // Statistik Card - Kuning Full
+  statsContainer: { 
+    paddingHorizontal: Spacing.pagePadding,
+    marginTop: 10,
+  },
+  heroCard: {
+    backgroundColor: Colors.primary, // #f7bd1a
+    padding: Spacing.cardPadding,
+    borderRadius: BorderRadius.card, // 24px
+    ...Shadow.soft,
+  },
+  heroLabel: {
+    fontSize: FontSize.caption,
+    fontFamily: 'Inter_500Medium',
+    color: Colors.text.onPrimary,
+    marginBottom: Spacing.xs,
+  },
+  heroNumber: {
+    fontSize: FontSize.stockLarge,
+    fontFamily: 'Poppins_700Bold',
+    color: Colors.text.onPrimary,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 4,
+    marginTop: Spacing.md,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#ffffff',
+    borderRadius: 4,
+    width: '60%',
+  },
+  
+  // Menu Grid
+  mainContent: { paddingHorizontal: Spacing.pagePadding, marginTop: Spacing.lg },
+  menuGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.cardGap,
+  },
+  menuCard: {
+    width: '47%',
+    backgroundColor: Colors.background.card,
+    padding: Spacing.cardPadding,
+    borderRadius: BorderRadius.card,
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#f4f4f4',
+    borderColor: '#f0f0f0',
+    ...Shadow.soft,
   },
-  iconBox: { 
-    width: 60, 
-    height: 60, 
-    borderRadius: 15, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginRight: 15 
+  menuIconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    backgroundColor: Colors.iconBox.yellow,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
   },
-  actionTextContent: { flex: 1 },
-  actionTitle: { fontSize: 16, fontWeight: 'bold', color: '#000' },
-  actionSub: { fontSize: 12, color: '#888', marginTop: 2 },
+  menuTitle: {
+    fontSize: FontSize.body,
+    fontFamily: 'Poppins_600SemiBold',
+    color: Colors.text.primary,
+    textAlign: 'center',
+  },
 });

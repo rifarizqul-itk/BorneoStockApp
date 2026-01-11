@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors, Spacing, BorderRadius, FontSize, Shadow } from '@/constants/theme';
 
 export default function ItemDetail() {
   const { id } = useLocalSearchParams();
@@ -50,7 +51,7 @@ export default function ItemDetail() {
     }
   };
 
-  if (loading) return <ActivityIndicator size="large" color="#f7bd1a" style={{marginTop: 50}} />;
+  if (loading) return <ActivityIndicator size="large" color={Colors.primary} style={{marginTop: 50}} />;
   if (!item) return <View style={styles.container}><Text>Barang tidak ditemukan.</Text></View>;
 
   const renderEditField = (label: string, value: string, key: string, keyboard: any = 'default') => (
@@ -72,48 +73,45 @@ export default function ItemDetail() {
       contentContainerStyle={{ alignSelf: 'center', width: '100%', maxWidth: 800 }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header Elegan */}
+      {/* FAB Edit Button */}
+      <TouchableOpacity 
+        style={styles.editFab} 
+        onPress={() => isEditing ? handleUpdate() : setIsEditing(true)}
+      >
+        <Ionicons 
+          name={isEditing ? "checkmark" : "create-outline"} 
+          size={24} 
+          color={Colors.primary} 
+        />
+      </TouchableOpacity>
+
+      {/* Header */}
       <View style={styles.topSection}>
-        <View style={styles.headerInfo}>
-            <View style={styles.badge}>
-                <Text style={styles.badgeText}>{item.category || 'PRODUK'}</Text>
-            </View>
-            <Text style={styles.title}>{item.name}</Text>
-            <Text style={styles.subtitle}>{item.brand} • {item.model}</Text>
+        <Text style={styles.title}>{item.name}</Text>
+        <Text style={styles.subtitle}>{item.brand} • {item.model}</Text>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{item.category || 'PRODUK'}</Text>
         </View>
-        <TouchableOpacity 
-          style={[styles.editCircle, {backgroundColor: isEditing ? '#000' : '#f7bd1a'}]} 
-          onPress={() => isEditing ? handleUpdate() : setIsEditing(true)}
-        >
-          <Ionicons name={isEditing ? "checkmark" : "create-outline"} size={24} color={isEditing ? "#f7bd1a" : "#000"} />
-        </TouchableOpacity>
       </View>
 
       {!isEditing ? (
         <View style={styles.content}>
-          {/* Kartu Stok Gede */}
+          {/* Kartu Stok - Background Kuning */}
           <View style={styles.mainCard}>
-            <View style={styles.stockInfo}>
-                <Text style={styles.stockValue}>{item.stock}</Text>
-                <Text style={styles.stockLabel}>UNIT TERSEDIA</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.locationInfo}>
-                <Ionicons name="location" size={20} color="#f7bd1a" />
-                <Text style={styles.locationText}>{item.location || 'Rak belum diatur'}</Text>
-            </View>
+            <Text style={styles.stockValue}>{item.stock}</Text>
+            <Text style={styles.stockLabel}>UNIT TERSEDIA</Text>
           </View>
 
-          {/* Kartu Harga */}
+          {/* Harga Card */}
           <Text style={styles.sectionHeader}>Detail Harga</Text>
           <View style={styles.infoRow}>
             <View style={[styles.infoCard, {flex:1}]}>
                 <Text style={styles.infoLabel}>Harga Modal</Text>
                 <Text style={styles.infoValue}>Rp {(Number(item.price_buy) || 0).toLocaleString('id-ID')}</Text>
             </View>
-            <View style={[styles.infoCard, {flex:1, borderLeftWidth: 4, borderLeftColor: '#f7bd1a'}]}>
+            <View style={[styles.infoCard, {flex:1, borderLeftWidth: 4, borderLeftColor: Colors.primary}]}>
                 <Text style={styles.infoLabel}>Harga Jual</Text>
-                <Text style={[styles.infoValue, {color: '#000'}]}>Rp {(Number(item.price_sell) || 0).toLocaleString('id-ID')}</Text>
+                <Text style={[styles.infoValue, {color: Colors.text.primary}]}>Rp {(Number(item.price_sell) || 0).toLocaleString('id-ID')}</Text>
             </View>
           </View>
 
@@ -122,6 +120,10 @@ export default function ItemDetail() {
              <View style={styles.listItem}>
                 <Text style={styles.listLabel}>Kualitas</Text>
                 <Text style={styles.listValue}>{item.quality || '-'}</Text>
+             </View>
+             <View style={styles.listItem}>
+                <Text style={styles.listLabel}>Lokasi Rak</Text>
+                <Text style={styles.listValue}>{item.location || '-'}</Text>
              </View>
              <View style={styles.listItem}>
                 <Text style={styles.listLabel}>Barcode</Text>
@@ -148,8 +150,9 @@ export default function ItemDetail() {
         </View>
       )}
 
+      {/* Delete Button */}
       <TouchableOpacity 
-        style={styles.deleteAction} 
+        style={styles.deleteButton} 
         onPress={() => {
           Alert.alert("Hapus Barang", "Tindakan ini permanen. Lanjutkan?", [
             { text: "Batal", style: "cancel" },
@@ -167,54 +170,161 @@ export default function ItemDetail() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
-  topSection: { 
-    padding: 30, 
-    paddingTop: 60, 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'flex-start' 
+  container: { 
+    flex: 1, 
+    backgroundColor: Colors.background.main // #fafafa
   },
-  headerInfo: { flex: 1 },
-  badge: { backgroundColor: '#000', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8, marginBottom: 12 },
-  badgeText: { color: '#f7bd1a', fontSize: 10, fontWeight: 'bold' },
-  title: { fontSize: 26, fontWeight: '900', color: '#000' },
-  subtitle: { fontSize: 16, color: '#888', marginTop: 4 },
-  editCircle: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', elevation: 5 },
-  content: { paddingHorizontal: 25 },
-  mainCard: { 
-    backgroundColor: '#fff', 
-    padding: 25, 
-    borderRadius: 30, 
-    borderWidth: 1, 
-    borderColor: '#f0f0f0', 
+  
+  // FAB Edit Button
+  editFab: {
+    position: 'absolute',
+    right: Spacing.pagePadding,
+    top: Spacing.pageTop,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.secondary, // #000000
+    justifyContent: 'center',
     alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
+    ...Shadow.soft,
+    zIndex: 10,
   },
-  stockInfo: { alignItems: 'center' },
-  stockValue: { fontSize: 48, fontWeight: '900', color: '#000' },
-  stockLabel: { fontSize: 12, fontWeight: 'bold', color: '#888', letterSpacing: 1 },
-  divider: { height: 1, width: '100%', backgroundColor: '#f0f0f0', marginVertical: 20 },
-  locationInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  locationText: { fontSize: 16, fontWeight: 'bold', color: '#444' },
-  sectionHeader: { fontSize: 18, fontWeight: '900', color: '#000', marginTop: 30, marginBottom: 15 },
+  
+  // Header
+  topSection: { 
+    padding: Spacing.pagePadding + 10,
+    paddingTop: Spacing.pageTop,
+  },
+  title: { 
+    fontSize: 26,
+    fontFamily: 'Poppins_700Bold',
+    color: Colors.text.primary,
+  },
+  subtitle: { 
+    fontSize: FontSize.h3,
+    fontFamily: 'Inter_400Regular',
+    color: Colors.text.secondary,
+    marginTop: 4 
+  },
+  badge: { 
+    backgroundColor: Colors.badge.category.bg,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: BorderRadius.badge,
+    marginTop: 12 
+  },
+  badgeText: { 
+    color: Colors.badge.category.text,
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  
+  content: { paddingHorizontal: Spacing.pagePadding },
+  
+  // Main Card - Kuning
+  mainCard: {
+    backgroundColor: Colors.primary, // Kuning
+    padding: Spacing.cardPadding + 10,
+    borderRadius: BorderRadius.card,
+    alignItems: 'center',
+    ...Shadow.soft,
+  },
+  stockValue: {
+    fontSize: 48,
+    fontFamily: 'Poppins_700Bold',
+    color: Colors.text.onPrimary,
+  },
+  stockLabel: {
+    fontSize: FontSize.caption,
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.text.onPrimary,
+    opacity: 0.8,
+  },
+  
+  // Section
+  sectionHeader: { 
+    fontSize: FontSize.h2,
+    fontFamily: 'Poppins_700Bold',
+    color: Colors.text.primary,
+    marginTop: 30,
+    marginBottom: 15 
+  },
   infoRow: { flexDirection: 'row', gap: 15 },
-  infoCard: { backgroundColor: '#f8f8f8', padding: 20, borderRadius: 20 },
-  infoLabel: { fontSize: 10, fontWeight: 'bold', color: '#888', marginBottom: 5 },
-  infoValue: { fontSize: 16, fontWeight: '900' },
-  listCard: { backgroundColor: '#fff', marginTop: 20, borderRadius: 25, borderWidth: 1, borderColor: '#f0f0f0', padding: 10 },
-  listItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, borderBottomWidth: 1, borderBottomColor: '#f8f8f8' },
-  listLabel: { color: '#888', fontWeight: 'bold' },
-  listValue: { color: '#000', fontWeight: 'bold' },
-  editForm: { padding: 25 },
+  infoCard: { 
+    backgroundColor: Colors.background.card,
+    padding: 20,
+    borderRadius: BorderRadius.card,
+    ...Shadow.soft,
+  },
+  infoLabel: { 
+    fontSize: 10,
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.text.secondary,
+    marginBottom: 5 
+  },
+  infoValue: { 
+    fontSize: FontSize.h3,
+    fontFamily: 'Poppins_700Bold',
+  },
+  
+  listCard: { 
+    backgroundColor: Colors.background.card,
+    marginTop: 20,
+    borderRadius: BorderRadius.card,
+    ...Shadow.soft,
+  },
+  listItem: { 
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f8f8f8' 
+  },
+  listLabel: { 
+    color: Colors.text.secondary,
+    fontFamily: 'Inter_500Medium',
+  },
+  listValue: { 
+    color: Colors.text.primary,
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  
+  // Edit Form
+  editForm: { padding: Spacing.pagePadding },
   editGroup: { marginBottom: 20 },
-  editLabel: { fontSize: 10, fontWeight: 'bold', color: '#ccc', marginBottom: 8, textTransform: 'uppercase' },
-  editInput: { backgroundColor: '#f9f9f9', padding: 15, borderRadius: 15, fontSize: 16, fontWeight: 'bold', color: '#000' },
+  editLabel: { 
+    fontSize: FontSize.caption,
+    fontFamily: 'Poppins_600SemiBold',
+    color: Colors.text.secondary,
+    marginBottom: 8,
+  },
+  editInput: { 
+    backgroundColor: Colors.input.background,
+    padding: 15,
+    borderRadius: BorderRadius.input,
+    fontSize: FontSize.body,
+    fontFamily: 'Inter_400Regular',
+    color: Colors.text.primary,
+    borderWidth: 2,
+    borderColor: Colors.input.border,
+  },
   row: { flexDirection: 'row', gap: 15 },
-  deleteAction: { marginTop: 40, marginBottom: 50, alignItems: 'center' },
-  deleteText: { color: '#ff4d4d', fontWeight: 'bold', textDecorationLine: 'underline' }
+  
+  // Delete Button
+  deleteButton: {
+    backgroundColor: Colors.badge.stockOut.bg, // #ffebee
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: BorderRadius.button,
+    marginTop: Spacing.xl,
+    marginHorizontal: Spacing.pagePadding,
+    marginBottom: 50,
+  },
+  deleteText: {
+    fontSize: FontSize.body,
+    fontFamily: 'Poppins_600SemiBold',
+    color: Colors.badge.stockOut.text, // #c62828
+    textAlign: 'center',
+  }
 });
