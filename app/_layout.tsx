@@ -45,6 +45,7 @@ export default function RootLayout() {
         <Stack.Screen name="scan" options={{ title: 'Scan Barcode' }} />
         <Stack.Screen name="inventory" options={{ title: 'Daftar Stok' }} />
         <Stack.Screen name="add-item" options={{ title: 'Tambah Barang Baru' }} />
+        <Stack.Screen name="item/[id]" options={{ title: 'Detail Barang' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
