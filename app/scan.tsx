@@ -1,22 +1,25 @@
 import React, { useState } from 'react';
-import { Text, View, StyleSheet, Button, ActivityIndicator, Alert } from 'react-native';
+import { Text, View, StyleSheet, Button, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, Spacing, FontSize, Shadow } from '@/constants/theme';
 
 export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [flashEnabled, setFlashEnabled] = useState(false);
   const router = useRouter();
 
   if (!permission) return <View />;
   if (!permission.granted) {
     return (
       <View style={styles.container}>
-        <Text style={{ textAlign: 'center' }}>Izin kamera diperlukan.</Text>
-        <Button onPress={requestPermission} title="Berikan Izin" />
+        <Text style={styles.permissionText}>Izin kamera diperlukan untuk scan barcode</Text>
+        <Button onPress={requestPermission} title="Berikan Izin" color={Colors.primary} />
       </View>
     );
   }
@@ -55,39 +58,153 @@ export default function ScanScreen() {
       <CameraView
         onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
         style={StyleSheet.absoluteFillObject}
+        enableTorch={flashEnabled}
       />
+      
+      {/* Overlay Hitam */}
+      <View style={styles.overlay} />
+
+      {/* Corner Frame Brackets */}
+      <View style={styles.scanFrameContainer}>
+        {/* Top Left Corner */}
+        <View style={[styles.corner, styles.topLeft]} />
+        {/* Top Right Corner */}
+        <View style={[styles.corner, styles.topRight]} />
+        {/* Bottom Left Corner */}
+        <View style={[styles.corner, styles.bottomLeft]} />
+        {/* Bottom Right Corner */}
+        <View style={[styles.corner, styles.bottomRight]} />
+      </View>
+
+      {/* Instruksi */}
+      <View style={styles.instructionContainer}>
+        <Text style={styles.instructionText}>
+          Arahkan kamera ke barcode
+        </Text>
+        
+        {/* Flashlight Button */}
+        <TouchableOpacity 
+          style={styles.flashButton}
+          onPress={() => setFlashEnabled(!flashEnabled)}
+        >
+          <Ionicons 
+            name={flashEnabled ? "flash" : "flash-outline"} 
+            size={28} 
+            color={Colors.text.onPrimary} 
+          />
+        </TouchableOpacity>
+      </View>
       
       {/* Overlay saat mencari di database */}
       {searching && (
-        <View style={styles.overlay}>
-          <ActivityIndicator size="large" color="#f7bd1a" />
+        <View style={styles.searchingOverlay}>
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.searchingText}>Mengecek Stok...</Text>
         </View>
       )}
-
-      {/* Frame Penunjuk Scan */}
-      <View style={styles.scanFrame} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
-  overlay: { 
+  container: { 
+    flex: 1, 
+    backgroundColor: '#000' 
+  },
+  permissionText: {
+    color: '#fff',
+    fontSize: FontSize.h3,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.pagePadding,
+  },
+  
+  // Overlay
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  
+  // Corner Frame Container
+  scanFrameContainer: {
+    position: 'absolute',
+    width: 280,
+    height: 280,
+    alignSelf: 'center',
+    top: '30%',
+  },
+  corner: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    borderColor: Colors.primary, // #f7bd1a
+    borderWidth: 4,
+  },
+  topLeft: {
+    top: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 12,
+  },
+  topRight: {
+    top: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderBottomWidth: 0,
+    borderTopRightRadius: 12,
+  },
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 12,
+  },
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+    borderBottomRightRadius: 12,
+  },
+  
+  // Instruction
+  instructionContainer: {
+    position: 'absolute',
+    bottom: 100,
+    alignSelf: 'center',
+    alignItems: 'center',
+  },
+  instructionText: {
+    color: '#ffffff',
+    fontSize: FontSize.body,
+    fontFamily: 'Inter_500Medium',
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+  },
+  flashButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadow.button,
+  },
+  
+  // Searching Overlay
+  searchingOverlay: { 
     ...StyleSheet.absoluteFillObject, 
-    backgroundColor: 'rgba(0,0,0,0.7)', 
+    backgroundColor: 'rgba(0,0,0,0.8)', 
     justifyContent: 'center', 
     alignItems: 'center' 
   },
-  searchingText: { color: '#f7bd1a', marginTop: 10, fontWeight: 'bold' },
-  scanFrame: {
-    width: 250,
-    height: 250,
-    borderWidth: 2,
-    borderColor: '#f7bd1a',
-    backgroundColor: 'transparent',
-    alignSelf: 'center',
-    marginTop: '30%',
-    borderRadius: 20
-  }
+  searchingText: { 
+    color: Colors.primary,
+    marginTop: 10,
+    fontSize: FontSize.h3,
+    fontFamily: 'Poppins_600SemiBold',
+  },
 });
