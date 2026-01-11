@@ -85,7 +85,7 @@ export default function HomeScreen() {
 
             <TouchableOpacity 
               style={styles.menuCard} 
-              onPress={() => {}}
+              onPress={() => router.push('/report' as any)}
             >
               <View style={styles.menuIconBox}>
                 <Ionicons name="stats-chart-outline" size={32} color={Colors.primary} />
