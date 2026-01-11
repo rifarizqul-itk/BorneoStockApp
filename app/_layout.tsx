@@ -46,6 +46,7 @@ export default function RootLayout() {
         <Stack.Screen name="inventory" options={{ title: 'Daftar Stok' }} />
         <Stack.Screen name="add-item" options={{ title: 'Tambah Barang Baru' }} />
         <Stack.Screen name="item/[id]" options={{ title: 'Detail Barang' }} />
+        <Stack.Screen name="report" options={{ title: 'Laporan' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
