@@ -30,7 +30,7 @@ export default function HomeScreen() {
         
         {/* Header - Logo Kiri + Avatar Kanan */}
         <View style={styles.topHeader}>
-          <Text style={styles.brandName}>BORNEO STOCK</Text>
+          <Text style={styles.brandName}>BORNEO SPECIALIS PONSEL</Text>
           <View style={styles.avatarCircle}>
             <Ionicons name="person" size={24} color={Colors.text.onPrimary} />
           </View>
