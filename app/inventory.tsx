@@ -4,6 +4,7 @@ import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { Colors, Spacing, BorderRadius, FontSize, Shadow } from '@/constants/theme';
 
 interface InventoryItem {
   id: string;
@@ -18,7 +19,7 @@ interface InventoryItem {
 
 export default function InventoryScreen() {
   const router = useRouter();
-  const { width } = useWindowDimensions(); // Deteksi Lebar Layar
+  const { width } = useWindowDimensions();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
@@ -50,10 +51,12 @@ export default function InventoryScreen() {
 
   const renderItem = ({ item }: { item: InventoryItem }) => (
     <TouchableOpacity 
-        // Style dinamis untuk lebar kartu
         style={[styles.itemCard, { flex: 1/numColumns }]} 
         onPress={() => router.push(`/item/${item.id}` as any)}
     >
+        <View style={styles.itemIconBox}>
+            <Ionicons name="cube" size={24} color={Colors.primary} />
+        </View>
         <View style={styles.itemInfo}>
             <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
             <Text style={styles.itemSub}>{item.brand} • {item.model}</Text>
@@ -61,17 +64,11 @@ export default function InventoryScreen() {
                 <View style={styles.categoryBadge}>
                     <Text style={styles.categoryText}>{item.category || 'Sparepart'}</Text>
                 </View>
-                {item.location && (
-                    <View style={styles.locationBadge}>
-                        <Ionicons name="location-outline" size={12} color="#888" />
-                        <Text style={styles.locationText}>{item.location}</Text>
-                    </View>
-                )}
             </View>
         </View>
         <View style={styles.stockBox}>
             <Text style={styles.stockValue}>{item.stock}</Text>
-            <Text style={styles.stockLabel}>Stok</Text>
+            <Text style={styles.stockLabel}>Unit</Text>
         </View>
     </TouchableOpacity>
   );
@@ -80,21 +77,21 @@ export default function InventoryScreen() {
     <View style={styles.container}>
       <View style={styles.searchWrapper}>
         <View style={styles.searchBar}>
-            <Ionicons name="search-outline" size={20} color="#888" />
+            <Ionicons name="search-outline" size={20} color={Colors.text.secondary} />
             <TextInput
-            style={styles.searchInput}
-            placeholder="Cari barang atau tipe HP..."
-            placeholderTextColor="#888"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
+              style={styles.searchInput}
+              placeholder="Cari barang atau tipe HP..."
+              placeholderTextColor={Colors.text.secondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
         </View>
       </View>
 
       <FlatList
-        key={numColumns} // Kunci untuk mereset layout saat lipatan berubah
+        key={numColumns}
         numColumns={numColumns}
-        columnWrapperStyle={numColumns > 1 ? { gap: 15 } : null} // Jarak antar kolom
+        columnWrapperStyle={numColumns > 1 ? { gap: 15 } : null}
         data={filteredItems}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
@@ -111,45 +108,98 @@ export default function InventoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
-  searchWrapper: { padding: 20, backgroundColor: '#ffffff' },
+  container: { 
+    flex: 1, 
+    backgroundColor: Colors.background.main // #fafafa
+  },
+  searchWrapper: { 
+    padding: Spacing.md, 
+    backgroundColor: Colors.background.main 
+  },
   searchBar: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    backgroundColor: '#f8f8f8', 
+    backgroundColor: Colors.background.card,
     paddingHorizontal: 15, 
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: '#eee'
+    borderRadius: BorderRadius.input, // 16px
+    borderWidth: 2,
+    borderColor: Colors.input.border,
+    ...Shadow.soft,
   },
-  searchInput: { flex: 1, paddingVertical: 12, fontSize: 15, marginLeft: 10, color: '#000' },
-  listContent: { paddingHorizontal: 20, paddingBottom: 20 },
+  searchInput: { 
+    flex: 1, 
+    paddingVertical: 12, 
+    fontSize: FontSize.body,
+    fontFamily: 'Inter_400Regular',
+    marginLeft: 10, 
+    color: Colors.text.primary 
+  },
+  listContent: { paddingHorizontal: Spacing.md, paddingBottom: 20 },
+  
+  // Card Inventory
   itemCard: { 
-    backgroundColor: '#fff', 
+    backgroundColor: Colors.background.card,
     flexDirection: 'row', 
-    padding: 18, 
-    borderRadius: 20, 
-    marginBottom: 15,
+    padding: Spacing.cardPadding,
+    borderRadius: BorderRadius.card, // 24px
+    marginBottom: Spacing.cardGap,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
+    ...Shadow.soft,
+  },
+  itemIconBox: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: Colors.iconBox.yellow, // #fffbf0
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
   },
   itemInfo: { flex: 1, paddingRight: 10 },
-  itemName: { fontSize: 16, fontWeight: 'bold', color: '#000' },
-  itemSub: { fontSize: 13, color: '#888', marginTop: 2 },
+  itemName: { 
+    fontSize: FontSize.h3,
+    fontFamily: 'Poppins_600SemiBold',
+    color: Colors.text.primary,
+  },
+  itemSub: { 
+    fontSize: FontSize.caption,
+    fontFamily: 'Inter_400Regular',
+    color: Colors.text.secondary,
+    marginTop: 2 
+  },
   badgeRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  categoryBadge: { backgroundColor: '#f7bd1a', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start' },
-  categoryText: { fontSize: 10, fontWeight: 'bold', color: '#000' },
-  locationBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0f0f0', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, gap: 4 },
-  locationText: { fontSize: 10, color: '#888', fontWeight: '500' },
-  stockBox: { alignItems: 'center', backgroundColor: '#fafafa', padding: 10, borderRadius: 12, minWidth: 55 },
-  stockValue: { fontSize: 18, fontWeight: '900', color: '#000' },
-  stockLabel: { fontSize: 10, color: '#888', fontWeight: 'bold' },
+  categoryBadge: { 
+    backgroundColor: Colors.badge.category.bg, // #fff8e1
+    paddingHorizontal: 10, 
+    paddingVertical: 4, 
+    borderRadius: BorderRadius.badge,
+  },
+  categoryText: { 
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.badge.category.text, // #d4a017
+  },
+  stockBox: { 
+    alignItems: 'center', 
+    backgroundColor: Colors.iconBox.yellow,
+    padding: 12, 
+    borderRadius: 16,
+    minWidth: 60 
+  },
+  stockValue: { 
+    fontSize: 22,
+    fontFamily: 'Poppins_700Bold',
+    color: Colors.text.primary,
+  },
+  stockLabel: { 
+    fontSize: 10,
+    fontFamily: 'Inter_500Medium',
+    color: Colors.text.secondary,
+  },
   emptyContainer: { marginTop: 100, alignItems: 'center' },
-  emptyText: { color: '#ccc', fontSize: 16 },
+  emptyText: { 
+    color: Colors.text.secondary,
+    fontSize: FontSize.h3,
+    fontFamily: 'Inter_400Regular',
+  },
 });
