@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { Colors, Spacing, BorderRadius, FontSize, Shadow } from '@/constants/theme';
+import SyncStatusBar from '@/components/SyncStatusBar';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -25,6 +26,9 @@ export default function HomeScreen() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Sync Status Bar */}
+      <SyncStatusBar showAlways />
+      
       {/* Container Penampung untuk Optimasi Layar Lebar */}
       <View style={[styles.contentWrapper, isWideScreen && styles.wideContent]}>
         

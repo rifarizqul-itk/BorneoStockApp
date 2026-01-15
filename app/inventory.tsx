@@ -8,11 +8,15 @@ import { Colors, Spacing, BorderRadius, FontSize, Shadow } from '@/constants/the
 import { InventoryItem, FilterState } from '@/types/inventory';
 import QuickStockModal from '@/components/QuickStockModal';
 import AdvancedFilterModal from '@/components/AdvancedFilterModal';
+import SyncStatusBar from '@/components/SyncStatusBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { saveInventoryCache } from '@/utils/storage';
+import { useOffline } from '@/contexts/OfflineContext';
 
 export default function InventoryScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const { isOnline } = useOffline();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
@@ -75,9 +79,14 @@ export default function InventoryScreen() {
       setAvailableCategories(Array.from(categories).sort());
       setAvailableLocations(Array.from(locations).sort());
       setAvailableQualities(Array.from(qualities).sort());
+      
+      // Cache data when online
+      if (isOnline) {
+        saveInventoryCache(parentItems).catch(console.error);
+      }
     });
     return () => unsubscribe();
-  }, []);
+  }, [isOnline]);
 
   // Load saved filters from AsyncStorage
   useEffect(() => {
@@ -291,6 +300,9 @@ export default function InventoryScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Sync Status Bar */}
+      <SyncStatusBar />
+      
       <View style={styles.searchWrapper}>
         <View style={styles.searchBar}>
             <Ionicons name="search-outline" size={20} color={Colors.text.secondary} />
