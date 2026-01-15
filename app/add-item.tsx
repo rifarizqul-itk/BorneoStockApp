@@ -180,13 +180,17 @@ export default function AddItemScreen() {
     }
   };
 
-  const renderInput = (label: string, value: string, key: string, keyboardType: any = 'default', placeholder: string) => (
+  const renderInput = (label: string, value: string, key: string, keyboardType: any = 'default', placeholder: string, editable: boolean = true) => (
     <View style={styles.inputGroup}>
-      <Text style={styles.label}>{label} {key === 'name' || key === 'stock' ? '*' : ''}</Text>
+      <Text style={styles.label}>
+        {label} {key === 'name' || key === 'stock' ? '*' : ''}
+        {!editable && ' (Auto-filled dari parent)'}
+      </Text>
       <TextInput
         style={[
           styles.input, 
-          focusedField === key && styles.inputFocused
+          focusedField === key && styles.inputFocused,
+          !editable && styles.inputDisabled
         ]}
         value={value}
         onChangeText={(text) => setForm({ ...form, [key]: text })}
@@ -195,6 +199,7 @@ export default function AddItemScreen() {
         placeholder={placeholder}
         placeholderTextColor={Colors.text.secondary}
         keyboardType={keyboardType}
+        editable={editable}
       />
     </View>
   );
@@ -262,9 +267,10 @@ export default function AddItemScreen() {
                         onPress={() => {
                           setSelectedParent(item.id);
                           setShowParentDropdown(false);
-                          // Auto-fill some fields from parent
+                          // Auto-fill fields from parent (including name)
                           setForm({
                             ...form,
+                            name: item.name || '',
                             brand: item.brand || '',
                             model: item.model || '',
                             category: item.category || '',
@@ -318,13 +324,13 @@ export default function AddItemScreen() {
                 />
             </View>
 
-            {renderInput("Nama Barang", form.name, 'name', 'default', "Contoh: LCD iPhone 11")}
+            {renderInput("Nama Barang", form.name, 'name', 'default', "Contoh: LCD iPhone 11", !(isVariant && selectedParent))}
             <View style={styles.row}>
-                <View style={{flex:1}}>{renderInput("Brand", form.brand, 'brand', 'default', "Apple")}</View>
-                <View style={{flex:1}}>{renderInput("Model", form.model, 'model', 'default', "iP 11")}</View>
+                <View style={{flex:1}}>{renderInput("Brand", form.brand, 'brand', 'default', "Apple", !(isVariant && selectedParent))}</View>
+                <View style={{flex:1}}>{renderInput("Model", form.model, 'model', 'default', "iP 11", !(isVariant && selectedParent))}</View>
             </View>
             <View style={styles.row}>
-                <View style={{flex:1}}>{renderInput("Kategori", form.category, 'category', 'default', "Sparepart")}</View>
+                <View style={{flex:1}}>{renderInput("Kategori", form.category, 'category', 'default', "Sparepart", !(isVariant && selectedParent))}</View>
                 <View style={{flex:1}}>{renderInput("Kualitas", form.quality, 'quality', 'default', "Ori")}</View>
             </View>
             
@@ -383,6 +389,10 @@ const styles = StyleSheet.create({
   },
   inputFocused: {
     borderColor: Colors.input.borderActive, // #f7bd1a
+  },
+  inputDisabled: {
+    backgroundColor: '#f0f0f0',
+    color: Colors.text.secondary,
   },
   barcodeInput: { 
     borderLeftWidth: 5, 
