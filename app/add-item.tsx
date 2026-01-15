@@ -130,19 +130,22 @@ export default function AddItemScreen() {
       } else {
         // Offline mode - save to pending changes
         const tempId = `temp_${generateChangeId()}`;
-        itemData.id = tempId;
-        itemData.created_at = Date.now();
-        itemData.updated_at = Date.now();
+        const itemDataWithId = {
+          ...itemData,
+          id: tempId,
+          created_at: Date.now(),
+          updated_at: Date.now(),
+        };
         
         // Save to cache immediately
-        await updateItemInCache(itemData);
+        await updateItemInCache(itemDataWithId);
         
         // Add to pending changes queue
         await addPendingChange({
           id: generateChangeId(),
           type: 'add',
           collection: 'inventory',
-          data: itemData,
+          data: itemDataWithId,
           timestamp: Date.now(),
         });
         

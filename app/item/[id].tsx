@@ -93,14 +93,20 @@ export default function ItemDetail() {
   }, [fetchItem, id]);
 
   const handleUpdate = async () => {
-    if (!item.name || !item.stock) {
+    if (!item || !item.name || !item.stock) {
       Alert.alert("Error", "Nama barang dan Stok wajib diisi!");
       return;
     }
 
     try {
       const updateData = {
-        ...item,
+        name: item.name,
+        brand: item.brand,
+        model: item.model,
+        category: item.category,
+        location: item.location,
+        barcode: item.barcode,
+        quality: item.quality,
         stock: Number(item.stock),
         price_buy: Number(item.price_buy) || 0,
         price_sell: Number(item.price_sell) || 0,
@@ -113,7 +119,7 @@ export default function ItemDetail() {
         Alert.alert("Sukses", "Data diperbarui!");
       } else {
         // Offline mode - save to pending changes
-        await updateItemInCache(updateData);
+        await updateItemInCache({ ...updateData, id: id as string });
         await addPendingChange({
           id: generateChangeId(),
           type: 'update',
@@ -168,10 +174,10 @@ export default function ItemDetail() {
       <Text style={styles.editLabel}>{label}</Text>
       <TextInput
         style={styles.editInput}
-        value={value?.toString()}
+        value={value?.toString() || ''}
         editable={isEditing}
         keyboardType={keyboard}
-        onChangeText={(text) => setItem({ ...item, [key]: text })}
+        onChangeText={(text) => item && setItem({ ...item, [key]: text })}
       />
     </View>
   );
@@ -404,20 +410,24 @@ export default function ItemDetail() {
         </View>
       ) : (
         <View style={styles.editForm}>
-          {renderEditField("Nama Barang", item.name, 'name')}
-          <View style={styles.row}>
-            <View style={{flex:1}}>{renderEditField("Brand", item.brand, 'brand')}</View>
-            <View style={{flex:1}}>{renderEditField("Model", item.model, 'model')}</View>
-          </View>
-          <View style={styles.row}>
-            <View style={{flex:1}}>{renderEditField("Stok", item.stock, 'stock', 'numeric')}</View>
-            <View style={{flex:1}}>{renderEditField("Lokasi", item.location, 'location')}</View>
-          </View>
-          <View style={styles.row}>
-            <View style={{flex:1}}>{renderEditField("Harga Modal", item.price_buy, 'price_buy', 'numeric')}</View>
-            <View style={{flex:1}}>{renderEditField("Harga Jual", item.price_sell, 'price_sell', 'numeric')}</View>
-          </View>
-          {renderEditField("Barcode", item.barcode, 'barcode')}
+          {item && (
+            <>
+              {renderEditField("Nama Barang", item.name || '', 'name')}
+              <View style={styles.row}>
+                <View style={{flex:1}}>{renderEditField("Brand", item.brand || '', 'brand')}</View>
+                <View style={{flex:1}}>{renderEditField("Model", item.model || '', 'model')}</View>
+              </View>
+              <View style={styles.row}>
+                <View style={{flex:1}}>{renderEditField("Stok", String(item.stock || 0), 'stock', 'numeric')}</View>
+                <View style={{flex:1}}>{renderEditField("Lokasi", item.location || '', 'location')}</View>
+              </View>
+              <View style={styles.row}>
+                <View style={{flex:1}}>{renderEditField("Harga Modal", String(item.price_buy || 0), 'price_buy', 'numeric')}</View>
+                <View style={{flex:1}}>{renderEditField("Harga Jual", String(item.price_sell || 0), 'price_sell', 'numeric')}</View>
+              </View>
+              {renderEditField("Barcode", item.barcode || '', 'barcode')}
+            </>
+          )}
         </View>
       )}
 

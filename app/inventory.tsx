@@ -63,7 +63,8 @@ export default function InventoryScreen() {
       
       querySnapshot.forEach((doc) => {
         const data = doc.data() as InventoryItem;
-        inventoryData.push({ id: doc.id, ...data });
+        const itemWithId = { ...data, id: doc.id };
+        inventoryData.push(itemWithId);
         
         // Collect unique values for filters
         if (data.category) categories.add(data.category);
@@ -251,7 +252,7 @@ export default function InventoryScreen() {
 
   const renderItem = ({ item }: { item: InventoryItem }) => {
     const hasVariants = item.variants && item.variants.length > 0;
-    const variantCount = hasVariants ? item.variants.length : 0;
+    const variantCount = hasVariants ? (item.variants?.length || 0) : 0;
     
     return (
       <TouchableOpacity 
