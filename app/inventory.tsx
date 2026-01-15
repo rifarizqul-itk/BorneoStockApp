@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TextInput, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TextInput, TouchableOpacity, useWindowDimensions, ScrollView } from 'react-native';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, Spacing, BorderRadius, FontSize, Shadow } from '@/constants/theme';
-import { InventoryItem } from '@/types/inventory';
+import { InventoryItem, FilterState } from '@/types/inventory';
 import QuickStockModal from '@/components/QuickStockModal';
+import AdvancedFilterModal from '@/components/AdvancedFilterModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function InventoryScreen() {
   const router = useRouter();
@@ -26,6 +28,24 @@ export default function InventoryScreen() {
     currentStock: 0,
   });
 
+  // Filter states
+  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    categories: [],
+    locations: [],
+    stockRange: { min: 0, max: 99999 },
+    priceRange: { min: 0, max: 99999999 },
+    qualities: [],
+    stockStatus: 'all',
+    sortBy: 'newest',
+  });
+  const [quickFilters, setQuickFilters] = useState<string[]>([]);
+
+  // Available filter options
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [availableLocations, setAvailableLocations] = useState<string[]>([]);
+  const [availableQualities, setAvailableQualities] = useState<string[]>([]);
+
   // Logika Kolom: 1 kolom di HP biasa/Cover Screen, 2 kolom di Main Screen Fold
   const numColumns = width > 700 ? 2 : 1;
 
@@ -33,9 +53,18 @@ export default function InventoryScreen() {
     const q = query(collection(db, "inventory"), orderBy("created_at", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const inventoryData: InventoryItem[] = [];
+      const categories = new Set<string>();
+      const locations = new Set<string>();
+      const qualities = new Set<string>();
+      
       querySnapshot.forEach((doc) => {
         const data = doc.data() as InventoryItem;
         inventoryData.push({ id: doc.id, ...data });
+        
+        // Collect unique values for filters
+        if (data.category) categories.add(data.category);
+        if (data.location) locations.add(data.location);
+        if (data.quality) qualities.add(data.quality);
       });
       
       // Filter out variants - only show parent items and standalone items
@@ -43,18 +72,173 @@ export default function InventoryScreen() {
       
       setItems(parentItems);
       setFilteredItems(parentItems);
+      setAvailableCategories(Array.from(categories).sort());
+      setAvailableLocations(Array.from(locations).sort());
+      setAvailableQualities(Array.from(qualities).sort());
     });
     return () => unsubscribe();
   }, []);
 
+  // Load saved filters from AsyncStorage
   useEffect(() => {
-    const filtered = items.filter(item => 
-      item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.model?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.brand?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setFilteredItems(filtered);
-  }, [searchQuery, items]);
+    const loadFilters = async () => {
+      try {
+        const savedFilters = await AsyncStorage.getItem('inventory_filters');
+        if (savedFilters) {
+          setFilters(JSON.parse(savedFilters));
+        }
+      } catch (error) {
+        console.error('Error loading filters:', error);
+      }
+    };
+    loadFilters();
+  }, []);
+
+  // Apply filters and sorting
+  useEffect(() => {
+    let result = [...items];
+
+    // Apply search query
+    if (searchQuery) {
+      result = result.filter(item =>
+        item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.model?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.barcode?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Apply category filter
+    if (filters.categories.length > 0) {
+      result = result.filter(item =>
+        item.category && filters.categories.includes(item.category)
+      );
+    }
+
+    // Apply location filter
+    if (filters.locations.length > 0) {
+      result = result.filter(item =>
+        item.location && filters.locations.includes(item.location)
+      );
+    }
+
+    // Apply quality filter
+    if (filters.qualities.length > 0) {
+      result = result.filter(item =>
+        item.quality && filters.qualities.includes(item.quality)
+      );
+    }
+
+    // Apply stock status filter
+    if (filters.stockStatus !== 'all') {
+      result = result.filter(item => {
+        const stock = item.stock || 0;
+        switch (filters.stockStatus) {
+          case 'available':
+            return stock > 0;
+          case 'out':
+            return stock === 0;
+          case 'low':
+            return stock > 0 && stock < 10;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Apply stock range filter
+    result = result.filter(item => {
+      const stock = item.stock || 0;
+      return stock >= filters.stockRange.min && stock <= filters.stockRange.max;
+    });
+
+    // Apply price range filter
+    result = result.filter(item => {
+      const price = item.price_sell || 0;
+      return price >= filters.priceRange.min && price <= filters.priceRange.max;
+    });
+
+    // Apply sorting
+    switch (filters.sortBy) {
+      case 'name-asc':
+        result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        break;
+      case 'name-desc':
+        result.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+        break;
+      case 'stock-low':
+        result.sort((a, b) => (a.stock || 0) - (b.stock || 0));
+        break;
+      case 'stock-high':
+        result.sort((a, b) => (b.stock || 0) - (a.stock || 0));
+        break;
+      case 'price-low':
+        result.sort((a, b) => (a.price_sell || 0) - (b.price_sell || 0));
+        break;
+      case 'price-high':
+        result.sort((a, b) => (b.price_sell || 0) - (a.price_sell || 0));
+        break;
+      case 'variants':
+        result.sort((a, b) => (b.variants?.length || 0) - (a.variants?.length || 0));
+        break;
+      case 'newest':
+      default:
+        // Already sorted by created_at desc from Firestore
+        break;
+    }
+
+    setFilteredItems(result);
+  }, [searchQuery, items, filters]);
+
+  const handleApplyFilters = async (newFilters: FilterState) => {
+    setFilters(newFilters);
+    // Save to AsyncStorage
+    try {
+      await AsyncStorage.setItem('inventory_filters', JSON.stringify(newFilters));
+    } catch (error) {
+      console.error('Error saving filters:', error);
+    }
+  };
+
+  const handleQuickFilter = (category: string) => {
+    if (filters.categories.includes(category)) {
+      // Remove category
+      handleApplyFilters({
+        ...filters,
+        categories: filters.categories.filter(c => c !== category)
+      });
+    } else {
+      // Add category
+      handleApplyFilters({
+        ...filters,
+        categories: [...filters.categories, category]
+      });
+    }
+  };
+
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (filters.categories.length > 0) count += filters.categories.length;
+    if (filters.locations.length > 0) count += filters.locations.length;
+    if (filters.qualities.length > 0) count += filters.qualities.length;
+    if (filters.stockStatus !== 'all') count += 1;
+    if (filters.stockRange.min > 0 || filters.stockRange.max < 99999) count += 1;
+    if (filters.priceRange.min > 0 || filters.priceRange.max < 99999999) count += 1;
+    return count;
+  };
+
+  const activeFilterCount = getActiveFilterCount();
+
+  const SORT_OPTIONS = [
+    { value: 'newest', label: 'Terbaru' },
+    { value: 'name-asc', label: 'Nama A-Z' },
+    { value: 'name-desc', label: 'Nama Z-A' },
+    { value: 'stock-low', label: 'Stok Terendah' },
+    { value: 'stock-high', label: 'Stok Tertinggi' },
+    { value: 'price-low', label: 'Harga Terendah' },
+    { value: 'price-high', label: 'Harga Tertinggi' },
+    { value: 'variants', label: 'Paling Banyak Varian' },
+  ];
 
   const renderItem = ({ item }: { item: InventoryItem }) => {
     const hasVariants = item.variants && item.variants.length > 0;
@@ -118,7 +302,86 @@ export default function InventoryScreen() {
               onChangeText={setSearchQuery}
             />
         </View>
+        
+        {/* Sort and Filter Row */}
+        <View style={styles.filterRow}>
+          {/* Sort Dropdown */}
+          <TouchableOpacity 
+            style={styles.sortButton}
+            onPress={() => {
+              // Create a simple bottom sheet or modal for sort options
+              const currentIndex = SORT_OPTIONS.findIndex(opt => opt.value === filters.sortBy);
+              const nextIndex = (currentIndex + 1) % SORT_OPTIONS.length;
+              handleApplyFilters({
+                ...filters,
+                sortBy: SORT_OPTIONS[nextIndex].value as any
+              });
+            }}
+          >
+            <Ionicons name="swap-vertical" size={18} color={Colors.text.primary} />
+            <Text style={styles.sortButtonText}>
+              {SORT_OPTIONS.find(opt => opt.value === filters.sortBy)?.label || 'Sort'}
+            </Text>
+          </TouchableOpacity>
+          
+          {/* Advanced Filter Button */}
+          <TouchableOpacity 
+            style={styles.filterButton}
+            onPress={() => setShowAdvancedFilter(true)}
+          >
+            <Ionicons name="options-outline" size={18} color={Colors.text.primary} />
+            <Text style={styles.filterButtonText}>Filter</Text>
+            {activeFilterCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Quick Filter Chips */}
+      {availableCategories.length > 0 && (
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.quickFiltersScroll}
+          contentContainerStyle={styles.quickFilters}
+        >
+          <TouchableOpacity
+            style={[
+              styles.quickFilterChip,
+              filters.categories.length === 0 && styles.quickFilterChipActive
+            ]}
+            onPress={() => handleApplyFilters({ ...filters, categories: [] })}
+          >
+            <Text style={[
+              styles.quickFilterText,
+              filters.categories.length === 0 && styles.quickFilterTextActive
+            ]}>
+              Semua
+            </Text>
+          </TouchableOpacity>
+          
+          {availableCategories.slice(0, 10).map((category) => (
+            <TouchableOpacity
+              key={category}
+              style={[
+                styles.quickFilterChip,
+                filters.categories.includes(category) && styles.quickFilterChipActive
+              ]}
+              onPress={() => handleQuickFilter(category)}
+            >
+              <Text style={[
+                styles.quickFilterText,
+                filters.categories.includes(category) && styles.quickFilterTextActive
+              ]}>
+                {category}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
       <FlatList
         key={numColumns}
@@ -131,7 +394,24 @@ export default function InventoryScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
+            <Ionicons name="cube-outline" size={64} color={Colors.text.secondary} />
             <Text style={styles.emptyText}>Barang tidak ditemukan.</Text>
+            {activeFilterCount > 0 && (
+              <TouchableOpacity
+                style={styles.resetFiltersButton}
+                onPress={() => handleApplyFilters({
+                  categories: [],
+                  locations: [],
+                  stockRange: { min: 0, max: 99999 },
+                  priceRange: { min: 0, max: 99999999 },
+                  qualities: [],
+                  stockStatus: 'all',
+                  sortBy: 'newest',
+                })}
+              >
+                <Text style={styles.resetFiltersText}>Reset Filter</Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
       />
@@ -146,6 +426,17 @@ export default function InventoryScreen() {
         onSuccess={() => {
           // Data will refresh automatically via onSnapshot
         }}
+      />
+      
+      {/* Advanced Filter Modal */}
+      <AdvancedFilterModal
+        visible={showAdvancedFilter}
+        onClose={() => setShowAdvancedFilter(false)}
+        onApply={handleApplyFilters}
+        currentFilters={filters}
+        availableCategories={availableCategories}
+        availableLocations={availableLocations}
+        availableQualities={availableQualities}
       />
     </View>
   );
@@ -177,6 +468,88 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     marginLeft: 10, 
     color: Colors.text.primary 
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  sortButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.background.card,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: BorderRadius.input,
+    borderWidth: 2,
+    borderColor: Colors.input.border,
+  },
+  sortButtonText: {
+    fontSize: FontSize.caption,
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.text.primary,
+  },
+  filterButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.background.card,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: BorderRadius.input,
+    borderWidth: 2,
+    borderColor: Colors.input.border,
+  },
+  filterButtonText: {
+    fontSize: FontSize.caption,
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.text.primary,
+  },
+  filterBadge: {
+    backgroundColor: Colors.primary,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterBadgeText: {
+    fontSize: 10,
+    fontFamily: 'Poppins_700Bold',
+    color: Colors.text.onPrimary,
+  },
+  quickFiltersScroll: {
+    maxHeight: 50,
+  },
+  quickFilters: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  quickFilterChip: {
+    backgroundColor: Colors.input.background,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.badge,
+    borderWidth: 2,
+    borderColor: Colors.input.border,
+  },
+  quickFilterChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  quickFilterText: {
+    fontSize: FontSize.caption,
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.text.secondary,
+  },
+  quickFilterTextActive: {
+    color: Colors.text.onPrimary,
   },
   listContent: { paddingHorizontal: Spacing.md, paddingBottom: 20 },
   
@@ -268,5 +641,18 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     fontSize: FontSize.h3,
     fontFamily: 'Inter_400Regular',
+    marginTop: 16,
+  },
+  resetFiltersButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: BorderRadius.button,
+    marginTop: 16,
+  },
+  resetFiltersText: {
+    fontSize: FontSize.body,
+    fontFamily: 'Poppins_600SemiBold',
+    color: Colors.text.onPrimary,
   },
 });
