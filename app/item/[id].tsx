@@ -1,12 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs, onSnapshot, orderBy } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, FontSize, Shadow } from '@/constants/theme';
-import { InventoryItem, TransactionLog } from '@/types/inventory';
-import QuickStockModal from '@/components/QuickStockModal';
+import { InventoryItem } from '@/types/inventory';
 import { useOffline } from '@/contexts/OfflineContext';
 import { addPendingChange, updateItemInCache, removeItemFromCache } from '@/utils/storage';
 import { generateChangeId } from '@/utils/offlineSync';
@@ -18,22 +17,11 @@ export default function ItemDetail() {
   const [item, setItem] = useState<InventoryItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'details' | 'history' | 'variants'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'variants'>('details');
   
   // Variant states
   const [variants, setVariants] = useState<InventoryItem[]>([]);
   const [parentItem, setParentItem] = useState<InventoryItem | null>(null);
-  
-  // Transaction history
-  const [transactions, setTransactions] = useState<TransactionLog[]>([]);
-  
-  // Quick stock modal
-  const [quickStockModal, setQuickStockModal] = useState({
-    visible: false,
-    itemId: '',
-    itemName: '',
-    currentStock: 0,
-  });
 
   const fetchItem = useCallback(async () => {
     try {
@@ -72,25 +60,8 @@ export default function ItemDetail() {
   }, [id]);
 
   useEffect(() => { 
-    fetchItem(); 
-    
-    // Subscribe to transaction history
-    const transactionsQuery = query(
-      collection(db, 'transactions'),
-      where('item_id', '==', id),
-      orderBy('timestamp', 'desc')
-    );
-    
-    const unsubscribe = onSnapshot(transactionsQuery, (snapshot) => {
-      const logs: TransactionLog[] = [];
-      snapshot.forEach((doc) => {
-        logs.push({ id: doc.id, ...doc.data() } as TransactionLog);
-      });
-      setTransactions(logs);
-    });
-    
-    return () => unsubscribe();
-  }, [fetchItem, id]);
+    fetchItem();
+  }, [fetchItem]);
 
   const handleUpdate = async () => {
     if (!item || !item.name || !item.stock) {
@@ -200,21 +171,6 @@ export default function ItemDetail() {
         />
       </TouchableOpacity>
 
-      {/* FAB Quick Adjust Button */}
-      {!isEditing && (
-        <TouchableOpacity 
-          style={styles.quickAdjustFab} 
-          onPress={() => setQuickStockModal({
-            visible: true,
-            itemId: item.id,
-            itemName: item.name || 'Item',
-            currentStock: item.stock || 0,
-          })}
-        >
-          <Ionicons name="flash" size={24} color={Colors.primary} />
-        </TouchableOpacity>
-      )}
-
       {/* Header */}
       <View style={styles.topSection}>
         <Text style={styles.title}>{item.name}</Text>
@@ -266,15 +222,6 @@ export default function ItemDetail() {
               </Text>
             </TouchableOpacity>
           )}
-          
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'history' && styles.tabActive]}
-            onPress={() => setActiveTab('history')}
-          >
-            <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>
-              Riwayat
-            </Text>
-          </TouchableOpacity>
         </View>
       )}
 
@@ -354,59 +301,6 @@ export default function ItemDetail() {
               </TouchableOpacity>
             </>
           )}
-          
-          {activeTab === 'history' && (
-            <>
-              <Text style={styles.sectionHeader}>Riwayat Stok</Text>
-              {transactions.length === 0 ? (
-                <View style={styles.emptyHistory}>
-                  <Ionicons name="document-outline" size={48} color={Colors.text.secondary} />
-                  <Text style={styles.emptyHistoryText}>Belum ada riwayat transaksi</Text>
-                </View>
-              ) : (
-                transactions.map((transaction) => (
-                  <View key={transaction.id} style={styles.transactionCard}>
-                    <View style={styles.transactionHeader}>
-                      <View style={[
-                        styles.transactionIcon,
-                        transaction.type === 'in' && styles.transactionIconIn,
-                        transaction.type === 'out' && styles.transactionIconOut,
-                      ]}>
-                        <Ionicons 
-                          name={transaction.type === 'in' ? 'arrow-down' : 'arrow-up'} 
-                          size={20} 
-                          color={Colors.background.card} 
-                        />
-                      </View>
-                      <View style={styles.transactionInfo}>
-                        <Text style={styles.transactionReason}>{transaction.reason}</Text>
-                        <Text style={styles.transactionDate}>
-                          {transaction.timestamp?.toDate?.()?.toLocaleDateString('id-ID') || '-'}
-                        </Text>
-                      </View>
-                      <View style={styles.transactionAmount}>
-                        <Text style={[
-                          styles.transactionQuantity,
-                          transaction.type === 'in' && styles.transactionQuantityIn,
-                          transaction.type === 'out' && styles.transactionQuantityOut,
-                        ]}>
-                          {transaction.type === 'in' ? '+' : '-'}{transaction.quantity}
-                        </Text>
-                        {transaction.old_stock !== undefined && transaction.new_stock !== undefined && (
-                          <Text style={styles.transactionStock}>
-                            {transaction.old_stock} → {transaction.new_stock}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                    {transaction.notes && (
-                      <Text style={styles.transactionNotes}>💬 {transaction.notes}</Text>
-                    )}
-                  </View>
-                ))
-              )}
-            </>
-          )}
         </View>
       ) : (
         <View style={styles.editForm}>
@@ -443,18 +337,6 @@ export default function ItemDetail() {
       >
         <Text style={styles.deleteText}>Hapus Barang dari Sistem</Text>
       </TouchableOpacity>
-      
-      {/* Quick Stock Modal */}
-      <QuickStockModal
-        visible={quickStockModal.visible}
-        onClose={() => setQuickStockModal({ ...quickStockModal, visible: false })}
-        itemId={quickStockModal.itemId}
-        itemName={quickStockModal.itemName}
-        currentStock={quickStockModal.currentStock}
-        onSuccess={() => {
-          fetchItem();
-        }}
-      />
     </ScrollView>
   );
 }
@@ -474,21 +356,6 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     backgroundColor: Colors.secondary, // #000000
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Shadow.soft,
-    zIndex: 10,
-  },
-  
-  // FAB Quick Adjust Button
-  quickAdjustFab: {
-    position: 'absolute',
-    right: Spacing.pagePadding + 70,
-    top: Spacing.pageTop,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     ...Shadow.soft,
@@ -709,86 +576,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.body,
     fontFamily: 'Poppins_600SemiBold',
     color: Colors.primary,
-  },
-  
-  // Transaction History
-  emptyHistory: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyHistoryText: {
-    fontSize: FontSize.body,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.text.secondary,
-    marginTop: 12,
-  },
-  transactionCard: {
-    backgroundColor: Colors.background.card,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.input,
-    marginBottom: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.input.border,
-  },
-  transactionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  transactionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  transactionIconIn: {
-    backgroundColor: Colors.status.success,
-  },
-  transactionIconOut: {
-    backgroundColor: Colors.status.error,
-  },
-  transactionInfo: {
-    flex: 1,
-  },
-  transactionReason: {
-    fontSize: FontSize.body,
-    fontFamily: 'Poppins_600SemiBold',
-    color: Colors.text.primary,
-  },
-  transactionDate: {
-    fontSize: FontSize.caption,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.text.secondary,
-    marginTop: 2,
-  },
-  transactionAmount: {
-    alignItems: 'flex-end',
-  },
-  transactionQuantity: {
-    fontSize: FontSize.h2,
-    fontFamily: 'Poppins_700Bold',
-  },
-  transactionQuantityIn: {
-    color: Colors.status.success,
-  },
-  transactionQuantityOut: {
-    color: Colors.status.error,
-  },
-  transactionStock: {
-    fontSize: FontSize.caption,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.text.secondary,
-    marginTop: 2,
-  },
-  transactionNotes: {
-    fontSize: FontSize.caption,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.text.secondary,
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.input.border,
   },
   
   // Edit Form

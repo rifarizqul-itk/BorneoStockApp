@@ -40,9 +40,6 @@ export const processPendingChange = async (change: PendingChange): Promise<boole
       case 'delete':
         await handleDeleteChange(change);
         break;
-      case 'stock_adjust':
-        await handleStockAdjustChange(change);
-        break;
       default:
         console.warn('Unknown change type:', change.type);
         return false;
@@ -105,42 +102,6 @@ const handleDeleteChange = async (change: PendingChange): Promise<void> => {
   if (change.collection === 'inventory') {
     await removeItemFromCache(change.itemId);
   }
-};
-
-/**
- * Handle 'stock_adjust' type change
- */
-const handleStockAdjustChange = async (change: PendingChange): Promise<void> => {
-  if (!change.itemId) {
-    throw new Error('Item ID is required for stock adjust operation');
-  }
-  
-  // Update inventory stock
-  const inventoryRef = doc(db, 'inventory', change.itemId);
-  await updateDoc(inventoryRef, {
-    stock: change.data.newStock,
-    updated_at: serverTimestamp(),
-  });
-  
-  // Create transaction log
-  await addDoc(collection(db, 'transactions'), {
-    item_id: change.itemId,
-    item_name: change.data.item_name,
-    type: change.data.type,
-    quantity: change.data.quantity,
-    reason: change.data.reason,
-    notes: change.data.notes || '',
-    timestamp: serverTimestamp(),
-    user: change.data.user || 'Admin',
-    old_stock: change.data.old_stock,
-    new_stock: change.data.newStock,
-  });
-  
-  // Update cache
-  await updateItemInCache({
-    id: change.itemId,
-    stock: change.data.newStock,
-  } as any);
 };
 
 /**

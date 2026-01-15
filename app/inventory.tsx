@@ -6,7 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, Spacing, BorderRadius, FontSize, Shadow } from '@/constants/theme';
 import { InventoryItem, FilterState } from '@/types/inventory';
-import QuickStockModal from '@/components/QuickStockModal';
 import AdvancedFilterModal from '@/components/AdvancedFilterModal';
 import SyncStatusBar from '@/components/SyncStatusBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,17 +19,6 @@ export default function InventoryScreen() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
-  const [quickStockModal, setQuickStockModal] = useState<{
-    visible: boolean;
-    itemId: string;
-    itemName: string;
-    currentStock: number;
-  }>({
-    visible: false,
-    itemId: '',
-    itemName: '',
-    currentStock: 0,
-  });
 
   // Filter states
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
@@ -280,21 +268,6 @@ export default function InventoryScreen() {
               <Text style={styles.stockValue}>{item.stock || 0}</Text>
               <Text style={styles.stockLabel}>Unit</Text>
           </View>
-          {/* Quick Adjust Button */}
-          <TouchableOpacity
-            style={styles.quickAdjustButton}
-            onPress={(e) => {
-              e.stopPropagation();
-              setQuickStockModal({
-                visible: true,
-                itemId: item.id,
-                itemName: item.name || 'Item',
-                currentStock: item.stock || 0,
-              });
-            }}
-          >
-            <Ionicons name="flash" size={18} color={Colors.primary} />
-          </TouchableOpacity>
       </TouchableOpacity>
     );
   };
@@ -427,18 +400,6 @@ export default function InventoryScreen() {
             )}
           </View>
         }
-      />
-      
-      {/* Quick Stock Modal */}
-      <QuickStockModal
-        visible={quickStockModal.visible}
-        onClose={() => setQuickStockModal({ ...quickStockModal, visible: false })}
-        itemId={quickStockModal.itemId}
-        itemName={quickStockModal.itemName}
-        currentStock={quickStockModal.currentStock}
-        onSuccess={() => {
-          // Data will refresh automatically via onSnapshot
-        }}
       />
       
       {/* Advanced Filter Modal */}
@@ -619,18 +580,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'Inter_600SemiBold',
     color: Colors.text.onPrimary,
-  },
-  quickAdjustButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.secondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Shadow.soft,
   },
   stockBox: { 
     alignItems: 'center', 

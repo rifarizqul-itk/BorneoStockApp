@@ -48,7 +48,7 @@ export interface FilterState {
 
 export interface PendingChange {
   id: string;
-  type: 'add' | 'update' | 'delete' | 'stock_adjust';
+  type: 'add' | 'update' | 'delete';
   collection: string;
   data: any;
   timestamp: number;

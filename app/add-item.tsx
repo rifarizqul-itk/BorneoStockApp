@@ -184,7 +184,6 @@ export default function AddItemScreen() {
     <View style={styles.inputGroup}>
       <Text style={styles.label}>
         {label} {key === 'name' || key === 'stock' ? '*' : ''}
-        {!editable && ' (Auto-filled dari parent)'}
       </Text>
       <TextInput
         style={[
