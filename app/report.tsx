@@ -344,7 +344,7 @@ export default function ReportScreen() {
       setTempEndDate(new Date(endDate));
       setDatePickerTarget('start');
     }
-  }, [showDateModal]);
+  }, [showDateModal, startDate, endDate]);
 
   // Handle date selection from calendar
   const onDateSelect = (date: Date) => {
