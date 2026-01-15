@@ -14,6 +14,9 @@ import { doc, updateDoc, collection, addDoc, serverTimestamp, getDoc } from 'fir
 import { db } from '../firebaseConfig';
 import { Colors, Spacing, BorderRadius, FontSize, Shadow } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
+import { useOffline } from '@/contexts/OfflineContext';
+import { addPendingChange, updateItemInCache } from '@/utils/storage';
+import { generateChangeId } from '@/utils/offlineSync';
 
 interface QuickStockModalProps {
   visible: boolean;
@@ -46,6 +49,7 @@ export default function QuickStockModal({
   const [selectedReason, setSelectedReason] = useState('Penjualan');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const { isOnline, refreshPendingCount } = useOffline();
 
   const handleQuickAdjust = (amount: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -76,29 +80,59 @@ export default function QuickStockModal({
 
     setLoading(true);
     try {
-      // Update stock in inventory
-      const itemRef = doc(db, 'inventory', itemId);
-      await updateDoc(itemRef, {
-        stock: newStock,
-        updated_at: serverTimestamp()
-      });
+      if (isOnline) {
+        // Online mode - update directly to Firestore
+        const itemRef = doc(db, 'inventory', itemId);
+        await updateDoc(itemRef, {
+          stock: newStock,
+          updated_at: serverTimestamp()
+        });
 
-      // Create transaction log
-      await addDoc(collection(db, 'transactions'), {
-        item_id: itemId,
-        item_name: itemName,
-        type: adjustment > 0 ? 'in' : 'out',
-        quantity: Math.abs(adjustment),
-        reason: selectedReason,
-        notes: notes || '',
-        timestamp: serverTimestamp(),
-        user: 'Admin',
-        old_stock: currentStock,
-        new_stock: newStock
-      });
+        // Create transaction log
+        await addDoc(collection(db, 'transactions'), {
+          item_id: itemId,
+          item_name: itemName,
+          type: adjustment > 0 ? 'in' : 'out',
+          quantity: Math.abs(adjustment),
+          reason: selectedReason,
+          notes: notes || '',
+          timestamp: serverTimestamp(),
+          user: 'Admin',
+          old_stock: currentStock,
+          new_stock: newStock
+        });
 
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Sukses', `Stok berhasil diperbarui!\n${currentStock} → ${newStock}`);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Sukses', `Stok berhasil diperbarui!\n${currentStock} → ${newStock}`);
+      } else {
+        // Offline mode - save to pending changes
+        await updateItemInCache({ id: itemId, stock: newStock } as any);
+        
+        await addPendingChange({
+          id: generateChangeId(),
+          type: 'stock_adjust',
+          collection: 'inventory',
+          data: {
+            newStock,
+            item_name: itemName,
+            type: adjustment > 0 ? 'in' : 'out',
+            quantity: Math.abs(adjustment),
+            reason: selectedReason,
+            notes: notes || '',
+            user: 'Admin',
+            old_stock: currentStock,
+          },
+          timestamp: Date.now(),
+          itemId: itemId,
+        });
+        
+        await refreshPendingCount();
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert(
+          'Tersimpan Offline',
+          `Stok diperbarui secara lokal!\n${currentStock} → ${newStock}\nAkan disinkronkan saat online.`
+        );
+      }
       
       // Reset form
       setAdjustment(0);

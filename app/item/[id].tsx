@@ -7,10 +7,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, FontSize, Shadow } from '@/constants/theme';
 import { InventoryItem, TransactionLog } from '@/types/inventory';
 import QuickStockModal from '@/components/QuickStockModal';
+import { useOffline } from '@/contexts/OfflineContext';
+import { addPendingChange, updateItemInCache, removeItemFromCache } from '@/utils/storage';
+import { generateChangeId } from '@/utils/offlineSync';
 
 export default function ItemDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { isOnline, refreshPendingCount } = useOffline();
   const [item, setItem] = useState<InventoryItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -95,18 +99,64 @@ export default function ItemDetail() {
     }
 
     try {
-      const docRef = doc(db, "inventory", id as string);
-      await updateDoc(docRef, {
+      const updateData = {
         ...item,
         stock: Number(item.stock),
         price_buy: Number(item.price_buy) || 0,
-        price_sell: Number(item.price_sell) || 0
-      });
-      Alert.alert("Sukses", "Data diperbarui!");
+        price_sell: Number(item.price_sell) || 0,
+      };
+
+      if (isOnline) {
+        // Online mode - update directly to Firestore
+        const docRef = doc(db, "inventory", id as string);
+        await updateDoc(docRef, updateData);
+        Alert.alert("Sukses", "Data diperbarui!");
+      } else {
+        // Offline mode - save to pending changes
+        await updateItemInCache(updateData);
+        await addPendingChange({
+          id: generateChangeId(),
+          type: 'update',
+          collection: 'inventory',
+          data: updateData,
+          timestamp: Date.now(),
+          itemId: id as string,
+        });
+        await refreshPendingCount();
+        Alert.alert("Tersimpan Offline", "Perubahan akan disinkronkan saat online.");
+      }
+      
       setIsEditing(false);
       fetchItem();
-    } catch {
+    } catch (error) {
+      console.error("Error updating item:", error);
       Alert.alert("Error", "Gagal memperbarui data.");
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      if (isOnline) {
+        // Online mode - delete directly from Firestore
+        await deleteDoc(doc(db, "inventory", id as string));
+      } else {
+        // Offline mode - save to pending changes
+        await removeItemFromCache(id as string);
+        await addPendingChange({
+          id: generateChangeId(),
+          type: 'delete',
+          collection: 'inventory',
+          data: {},
+          timestamp: Date.now(),
+          itemId: id as string,
+        });
+        await refreshPendingCount();
+        Alert.alert("Tersimpan Offline", "Penghapusan akan disinkronkan saat online.");
+      }
+      router.back();
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      Alert.alert("Error", "Gagal menghapus barang.");
     }
   };
 
@@ -377,10 +427,7 @@ export default function ItemDetail() {
         onPress={() => {
           Alert.alert("Hapus Barang", "Tindakan ini permanen. Lanjutkan?", [
             { text: "Batal", style: "cancel" },
-            { text: "Hapus", style: "destructive", onPress: async () => {
-              await deleteDoc(doc(db, "inventory", id as string));
-              router.back();
-            }}
+            { text: "Hapus", style: "destructive", onPress: handleDelete }
           ]);
         }}
       >

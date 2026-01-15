@@ -6,10 +6,14 @@ import { db } from '../firebaseConfig';
 import { Colors, Spacing, BorderRadius, FontSize, Shadow } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { InventoryItem } from '@/types/inventory';
+import { useOffline } from '@/contexts/OfflineContext';
+import { addPendingChange, updateItemInCache } from '@/utils/storage';
+import { generateChangeId } from '@/utils/offlineSync';
 
 export default function AddItemScreen() {
   const router = useRouter();
   const { barcode: scannedBarcode } = useLocalSearchParams();
+  const { isOnline, refreshPendingCount } = useOffline();
 
   const [form, setForm] = useState({
     barcode: (scannedBarcode as string) || '',
@@ -86,34 +90,84 @@ export default function AddItemScreen() {
         stock: stockVal,
         price_buy: buyVal,
         price_sell: sellVal,
-        created_at: serverTimestamp(),
-        updated_at: serverTimestamp(),
       };
 
       if (isVariant && selectedParent) {
-        // Add as a variant
         itemData.parent_id = selectedParent;
         itemData.variant_name = variantName;
         itemData.is_parent = false;
-        
-        // Add the new variant document
-        const variantRef = await addDoc(collection(db, "inventory"), itemData);
-        
-        // Update parent's variants array
-        const parentRef = doc(db, "inventory", selectedParent);
-        await updateDoc(parentRef, {
-          variants: arrayUnion(variantRef.id),
-          is_parent: true,
-          updated_at: serverTimestamp(),
-        });
       } else {
-        // Add as standalone item
         itemData.is_parent = false;
         itemData.variants = [];
-        await addDoc(collection(db, "inventory"), itemData);
+      }
+
+      if (isOnline) {
+        // Online mode - save directly to Firestore
+        if (isVariant && selectedParent) {
+          // Add as a variant
+          const variantRef = await addDoc(collection(db, "inventory"), {
+            ...itemData,
+            created_at: serverTimestamp(),
+            updated_at: serverTimestamp(),
+          });
+          
+          // Update parent's variants array
+          const parentRef = doc(db, "inventory", selectedParent);
+          await updateDoc(parentRef, {
+            variants: arrayUnion(variantRef.id),
+            is_parent: true,
+            updated_at: serverTimestamp(),
+          });
+        } else {
+          // Add as standalone item
+          await addDoc(collection(db, "inventory"), {
+            ...itemData,
+            created_at: serverTimestamp(),
+            updated_at: serverTimestamp(),
+          });
+        }
+        Alert.alert("Sukses", "Barang berhasil disimpan!");
+      } else {
+        // Offline mode - save to pending changes
+        const tempId = `temp_${generateChangeId()}`;
+        itemData.id = tempId;
+        itemData.created_at = Date.now();
+        itemData.updated_at = Date.now();
+        
+        // Save to cache immediately
+        await updateItemInCache(itemData);
+        
+        // Add to pending changes queue
+        await addPendingChange({
+          id: generateChangeId(),
+          type: 'add',
+          collection: 'inventory',
+          data: itemData,
+          timestamp: Date.now(),
+        });
+        
+        // If variant, also queue parent update
+        if (isVariant && selectedParent) {
+          await addPendingChange({
+            id: generateChangeId(),
+            type: 'update',
+            collection: 'inventory',
+            data: {
+              variants: arrayUnion(tempId),
+              is_parent: true,
+            },
+            timestamp: Date.now(),
+            itemId: selectedParent,
+          });
+        }
+        
+        await refreshPendingCount();
+        Alert.alert(
+          "Tersimpan Offline", 
+          "Barang disimpan secara lokal. Akan disinkronkan saat online."
+        );
       }
       
-      Alert.alert("Sukses", "Barang berhasil disimpan!");
       router.replace('/(tabs)');
     } catch (error) {
       console.error("Error saving item:", error);
