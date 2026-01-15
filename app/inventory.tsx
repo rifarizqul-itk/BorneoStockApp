@@ -5,17 +5,8 @@ import { db } from '../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, Spacing, BorderRadius, FontSize, Shadow } from '@/constants/theme';
-
-interface InventoryItem {
-  id: string;
-  name?: string;
-  brand?: string;
-  model?: string;
-  category?: string;
-  location?: string;
-  stock?: number;
-  created_at?: any;
-}
+import { InventoryItem } from '@/types/inventory';
+import QuickStockModal from '@/components/QuickStockModal';
 
 export default function InventoryScreen() {
   const router = useRouter();
@@ -23,6 +14,17 @@ export default function InventoryScreen() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
+  const [quickStockModal, setQuickStockModal] = useState<{
+    visible: boolean;
+    itemId: string;
+    itemName: string;
+    currentStock: number;
+  }>({
+    visible: false,
+    itemId: '',
+    itemName: '',
+    currentStock: 0,
+  });
 
   // Logika Kolom: 1 kolom di HP biasa/Cover Screen, 2 kolom di Main Screen Fold
   const numColumns = width > 700 ? 2 : 1;
@@ -32,10 +34,15 @@ export default function InventoryScreen() {
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const inventoryData: InventoryItem[] = [];
       querySnapshot.forEach((doc) => {
-        inventoryData.push({ id: doc.id, ...doc.data() } as InventoryItem);
+        const data = doc.data() as InventoryItem;
+        inventoryData.push({ id: doc.id, ...data });
       });
-      setItems(inventoryData);
-      setFilteredItems(inventoryData);
+      
+      // Filter out variants - only show parent items and standalone items
+      const parentItems = inventoryData.filter(item => !item.parent_id);
+      
+      setItems(parentItems);
+      setFilteredItems(parentItems);
     });
     return () => unsubscribe();
   }, []);
@@ -49,29 +56,54 @@ export default function InventoryScreen() {
     setFilteredItems(filtered);
   }, [searchQuery, items]);
 
-  const renderItem = ({ item }: { item: InventoryItem }) => (
-    <TouchableOpacity 
-        style={[styles.itemCard, { flex: 1/numColumns }]} 
-        onPress={() => router.push(`/item/${item.id}` as any)}
-    >
-        <View style={styles.itemIconBox}>
-            <Ionicons name="cube" size={24} color={Colors.primary} />
-        </View>
-        <View style={styles.itemInfo}>
-            <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-            <Text style={styles.itemSub}>{item.brand} • {item.model}</Text>
-            <View style={styles.badgeRow}>
-                <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryText}>{item.category || 'Sparepart'}</Text>
-                </View>
-            </View>
-        </View>
-        <View style={styles.stockBox}>
-            <Text style={styles.stockValue}>{item.stock}</Text>
-            <Text style={styles.stockLabel}>Unit</Text>
-        </View>
-    </TouchableOpacity>
-  );
+  const renderItem = ({ item }: { item: InventoryItem }) => {
+    const hasVariants = item.variants && item.variants.length > 0;
+    const variantCount = hasVariants ? item.variants.length : 0;
+    
+    return (
+      <TouchableOpacity 
+          style={[styles.itemCard, { flex: 1/numColumns }]} 
+          onPress={() => router.push(`/item/${item.id}` as any)}
+      >
+          <View style={styles.itemIconBox}>
+              <Ionicons name="cube" size={24} color={Colors.primary} />
+          </View>
+          <View style={styles.itemInfo}>
+              <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+              <Text style={styles.itemSub}>{item.brand} • {item.model}</Text>
+              <View style={styles.badgeRow}>
+                  <View style={styles.categoryBadge}>
+                      <Text style={styles.categoryText}>{item.category || 'Sparepart'}</Text>
+                  </View>
+                  {hasVariants && (
+                    <View style={styles.variantBadge}>
+                      <Text style={styles.variantText}>{variantCount} varian</Text>
+                    </View>
+                  )}
+              </View>
+          </View>
+          <View style={styles.stockBox}>
+              <Text style={styles.stockValue}>{item.stock || 0}</Text>
+              <Text style={styles.stockLabel}>Unit</Text>
+          </View>
+          {/* Quick Adjust Button */}
+          <TouchableOpacity
+            style={styles.quickAdjustButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              setQuickStockModal({
+                visible: true,
+                itemId: item.id,
+                itemName: item.name || 'Item',
+                currentStock: item.stock || 0,
+              });
+            }}
+          >
+            <Ionicons name="flash" size={18} color={Colors.primary} />
+          </TouchableOpacity>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -102,6 +134,18 @@ export default function InventoryScreen() {
             <Text style={styles.emptyText}>Barang tidak ditemukan.</Text>
           </View>
         }
+      />
+      
+      {/* Quick Stock Modal */}
+      <QuickStockModal
+        visible={quickStockModal.visible}
+        onClose={() => setQuickStockModal({ ...quickStockModal, visible: false })}
+        itemId={quickStockModal.itemId}
+        itemName={quickStockModal.itemName}
+        currentStock={quickStockModal.currentStock}
+        onSuccess={() => {
+          // Data will refresh automatically via onSnapshot
+        }}
       />
     </View>
   );
@@ -178,6 +222,29 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'Inter_600SemiBold',
     color: Colors.badge.category.text, // #d4a017
+  },
+  variantBadge: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.badge,
+  },
+  variantText: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.text.onPrimary,
+  },
+  quickAdjustButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadow.soft,
   },
   stockBox: { 
     alignItems: 'center', 

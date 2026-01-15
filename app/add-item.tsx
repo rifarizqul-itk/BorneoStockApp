@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Colors, Spacing, BorderRadius, FontSize, Shadow } from '@/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { InventoryItem } from '@/types/inventory';
 
 export default function AddItemScreen() {
   const router = useRouter();
@@ -24,10 +26,46 @@ export default function AddItemScreen() {
 
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  
+  // Variant related states
+  const [isVariant, setIsVariant] = useState(false);
+  const [variantName, setVariantName] = useState('');
+  const [parentItems, setParentItems] = useState<InventoryItem[]>([]);
+  const [selectedParent, setSelectedParent] = useState<string | null>(null);
+  const [showParentDropdown, setShowParentDropdown] = useState(false);
+
+  useEffect(() => {
+    // Fetch all potential parent items (non-variant items)
+    const fetchParentItems = async () => {
+      const q = query(collection(db, "inventory"));
+      const snapshot = await getDocs(q);
+      const items: InventoryItem[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data() as InventoryItem;
+        // Only include items that are not variants themselves
+        if (!data.parent_id) {
+          items.push({ id: doc.id, ...data });
+        }
+      });
+      setParentItems(items);
+    };
+    
+    fetchParentItems();
+  }, []);
 
   const handleSave = async () => {
     if (!form.name || !form.stock) {
       Alert.alert("Error", "Nama barang dan Stok wajib diisi!");
+      return;
+    }
+
+    if (isVariant && !selectedParent) {
+      Alert.alert("Error", "Pilih parent item untuk varian!");
+      return;
+    }
+
+    if (isVariant && !variantName) {
+      Alert.alert("Error", "Nama varian wajib diisi!");
       return;
     }
 
@@ -42,17 +80,43 @@ export default function AddItemScreen() {
 
     setLoading(true);
     try {
-      await addDoc(collection(db, "inventory"), {
+      const itemData: any = {
         ...form,
         barcode: form.barcode || '-',
         stock: stockVal,
         price_buy: buyVal,
         price_sell: sellVal,
         created_at: serverTimestamp(),
-      });
+        updated_at: serverTimestamp(),
+      };
+
+      if (isVariant && selectedParent) {
+        // Add as a variant
+        itemData.parent_id = selectedParent;
+        itemData.variant_name = variantName;
+        itemData.is_parent = false;
+        
+        // Add the new variant document
+        const variantRef = await addDoc(collection(db, "inventory"), itemData);
+        
+        // Update parent's variants array
+        const parentRef = doc(db, "inventory", selectedParent);
+        await updateDoc(parentRef, {
+          variants: arrayUnion(variantRef.id),
+          is_parent: true,
+          updated_at: serverTimestamp(),
+        });
+      } else {
+        // Add as standalone item
+        itemData.is_parent = false;
+        itemData.variants = [];
+        await addDoc(collection(db, "inventory"), itemData);
+      }
+      
       Alert.alert("Sukses", "Barang berhasil disimpan!");
       router.replace('/(tabs)');
-    } catch {
+    } catch (error) {
+      console.error("Error saving item:", error);
       Alert.alert("Error", "Gagal menyimpan data.");
     } finally {
       setLoading(false);
@@ -83,6 +147,102 @@ export default function AddItemScreen() {
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.formWrapper}>
             <Text style={styles.formHeader}>{scannedBarcode ? "Lengkapi Data" : "Input Manual"}</Text>
+            
+            {/* Variant Toggle */}
+            <TouchableOpacity 
+              style={styles.variantToggle}
+              onPress={() => {
+                setIsVariant(!isVariant);
+                if (!isVariant) {
+                  setShowParentDropdown(true);
+                } else {
+                  setSelectedParent(null);
+                  setVariantName('');
+                }
+              }}
+            >
+              <View style={styles.variantToggleLeft}>
+                <Ionicons 
+                  name={isVariant ? "checkbox" : "square-outline"} 
+                  size={24} 
+                  color={isVariant ? Colors.primary : Colors.text.secondary} 
+                />
+                <Text style={styles.variantToggleText}>
+                  Ini adalah varian dari produk yang sudah ada
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Parent Selection - Show only if variant mode */}
+            {isVariant && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Parent Item *</Text>
+                <TouchableOpacity 
+                  style={[styles.input, styles.dropdownButton]}
+                  onPress={() => setShowParentDropdown(!showParentDropdown)}
+                >
+                  <Text style={[
+                    styles.dropdownText,
+                    !selectedParent && styles.dropdownPlaceholder
+                  ]}>
+                    {selectedParent 
+                      ? parentItems.find(p => p.id === selectedParent)?.name 
+                      : "Pilih parent item"}
+                  </Text>
+                  <Ionicons 
+                    name={showParentDropdown ? "chevron-up" : "chevron-down"} 
+                    size={20} 
+                    color={Colors.text.secondary} 
+                  />
+                </TouchableOpacity>
+                
+                {showParentDropdown && (
+                  <ScrollView style={styles.dropdown} nestedScrollEnabled>
+                    {parentItems.map((item) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          setSelectedParent(item.id);
+                          setShowParentDropdown(false);
+                          // Auto-fill some fields from parent
+                          setForm({
+                            ...form,
+                            brand: item.brand || '',
+                            model: item.model || '',
+                            category: item.category || '',
+                          });
+                        }}
+                      >
+                        <Text style={styles.dropdownItemText}>{item.name}</Text>
+                        <Text style={styles.dropdownItemSubtext}>
+                          {item.brand} • {item.model}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+            )}
+
+            {/* Variant Name - Show only if variant mode */}
+            {isVariant && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Nama Varian *</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    focusedField === 'variant_name' && styles.inputFocused
+                  ]}
+                  value={variantName}
+                  onChangeText={setVariantName}
+                  onFocus={() => setFocusedField('variant_name')}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="Contoh: OLED Original, TFT Aftermarket"
+                  placeholderTextColor={Colors.text.secondary}
+                />
+              </View>
+            )}
             
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Barcode / ID Barang</Text>
@@ -170,6 +330,68 @@ const styles = StyleSheet.create({
   barcodeInput: { 
     borderLeftWidth: 5, 
     borderLeftColor: Colors.primary 
+  },
+  variantToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.iconBox.yellow,
+    padding: 16,
+    borderRadius: BorderRadius.input,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: Colors.input.border,
+  },
+  variantToggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  variantToggleText: {
+    fontSize: FontSize.body,
+    fontFamily: 'Inter_500Medium',
+    color: Colors.text.primary,
+    flex: 1,
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dropdownText: {
+    fontSize: FontSize.body,
+    fontFamily: 'Inter_400Regular',
+    color: Colors.text.primary,
+    flex: 1,
+  },
+  dropdownPlaceholder: {
+    color: Colors.text.secondary,
+  },
+  dropdown: {
+    maxHeight: 200,
+    backgroundColor: Colors.background.card,
+    borderRadius: BorderRadius.input,
+    borderWidth: 2,
+    borderColor: Colors.input.border,
+    marginTop: 8,
+    ...Shadow.soft,
+  },
+  dropdownItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.input.border,
+  },
+  dropdownItemText: {
+    fontSize: FontSize.body,
+    fontFamily: 'Poppins_600SemiBold',
+    color: Colors.text.primary,
+  },
+  dropdownItemSubtext: {
+    fontSize: FontSize.caption,
+    fontFamily: 'Inter_400Regular',
+    color: Colors.text.secondary,
+    marginTop: 2,
   },
   row: { flexDirection: 'row', gap: 15 },
   saveButton: { 
