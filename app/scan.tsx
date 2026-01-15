@@ -37,7 +37,19 @@ export default function ScanScreen() {
       if (!querySnapshot.empty) {
         // Jika Ditemukan: Ambil ID dokumen pertama
         const foundItem = querySnapshot.docs[0];
-        router.replace(`/item/${foundItem.id}` as any);
+        const itemData = foundItem.data();
+        
+        // Check if this is a parent item with variants
+        if (itemData.variants && itemData.variants.length > 0) {
+          // Redirect to variant selection
+          router.replace({
+            pathname: "/select-variant" as any,
+            params: { parentId: foundItem.id }
+          });
+        } else {
+          // Regular item or variant - go to detail page
+          router.replace(`/item/${foundItem.id}` as any);
+        }
       } else {
         // Jika Tidak Ditemukan: Arahkan ke form tambah barang
         router.replace({
@@ -45,7 +57,8 @@ export default function ScanScreen() {
           params: { barcode: data }
         });
       }
-    } catch {
+    } catch (error) {
+      console.error("Error scanning barcode:", error);
       Alert.alert("Error", "Gagal mengecek database.");
       setScanned(false);
     } finally {
